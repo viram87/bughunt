@@ -3,6 +3,7 @@ import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getCurrentUser } from "@/lib/auth";
+import { SITE_URL, SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, KEYWORDS } from "@/lib/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +16,43 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "BugHunt",
-  description: "Practice real debugging: find and fix intentional bugs, then learn the pattern.",
+  // metadataBase makes every relative URL below (OG images, canonicals)
+  // resolve absolutely — without it Next.js warns and social scrapers,
+  // which don't resolve relative paths, get broken image URLs.
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  keywords: KEYWORDS,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large" },
+  },
+  // Paste the content value from Google Search Console's HTML-tag
+  // verification here to verify ownership.
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+  },
 };
 
 export default async function RootLayout({ children }) {

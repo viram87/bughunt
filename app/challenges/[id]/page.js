@@ -2,12 +2,53 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { ChallengeWorkspace } from "@/components/challenge-workspace";
+import { JsonLd } from "@/components/json-ld";
+import { BUG_CATEGORIES, DIFFICULTIES, LANGUAGES } from "@/lib/constants";
+import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/site";
 
 // Without this, Next.js's automatic fetch caching can cache the Supabase
 // auth check itself, showing a stale logged-out state on this route even
 // after the user signs in — force a fresh render (and fresh auth check)
 // on every request instead.
 export const dynamic = "force-dynamic";
+
+function labelFor(list, value) {
+  return list.find((x) => x.value === value)?.label ?? value;
+}
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const { data: challenge } = await supabase
+    .from("bug_challenges")
+    .select("title, language, bug_category, difficulty, problem_description, symptom_description")
+    .eq("id", id)
+    .single();
+
+  if (!challenge) {
+    return { title: "Challenge not found", robots: { index: false, follow: false } };
+  }
+
+  const language = labelFor(LANGUAGES, challenge.language);
+  const category = labelFor(BUG_CATEGORIES, challenge.bug_category);
+  const difficulty = labelFor(DIFFICULTIES, challenge.difficulty);
+
+  const title = `${challenge.title} — ${language} debugging challenge`;
+  // The author-written problem description is real, unique copy, which is
+  // far better for search results than a templated blurb.
+  const article = /^[aeiou]/i.test(difficulty) ? "An" : "A";
+  const description = `${challenge.problem_description} ${article} ${difficulty.toLowerCase()} ${category.toLowerCase()} bug to find and fix, in your browser.`;
+  const url = absoluteUrl(`/challenges/${id}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { type: "article", url, title, description, siteName: SITE_NAME },
+    twitter: { card: "summary_large_image", title, description },
+  };
+}
 
 export default async function ChallengePage({ params }) {
   const { id } = await params;
@@ -49,12 +90,30 @@ export default async function ChallengePage({ params }) {
     isBookmarked = Boolean(count);
   }
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LearningResource",
+    name: challenge.title,
+    description: challenge.problem_description,
+    url: absoluteUrl(`/challenges/${id}`),
+    learningResourceType: "Exercise",
+    educationalLevel: labelFor(DIFFICULTIES, challenge.difficulty),
+    teaches: `${labelFor(BUG_CATEGORIES, challenge.bug_category)} bugs in ${labelFor(LANGUAGES, challenge.language)}`,
+    programmingLanguage: labelFor(LANGUAGES, challenge.language),
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    provider: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+  };
+
   return (
-    <ChallengeWorkspace
-      challenge={challenge}
-      isLoggedIn={!!user}
-      priorAttempts={priorAttempts}
-      isBookmarked={isBookmarked}
-    />
+    <>
+      <JsonLd data={jsonLd} />
+      <ChallengeWorkspace
+        challenge={challenge}
+        isLoggedIn={!!user}
+        priorAttempts={priorAttempts}
+        isBookmarked={isBookmarked}
+      />
+    </>
   );
 }

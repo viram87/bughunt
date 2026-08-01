@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { LANGUAGE_VALUES, BUG_CATEGORY_VALUES, DIFFICULTY_VALUES } from "@/lib/constants";
 import { ChallengeFilters } from "@/components/challenge-filters";
 import { ChallengeCard } from "@/components/challenge-card";
+import { JsonLd } from "@/components/json-ld";
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
 
 export default async function Home({ searchParams }) {
   const params = await searchParams;
@@ -23,8 +25,20 @@ export default async function Home({ searchParams }) {
 
   const { data: challenges, error } = await query;
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: SITE_NAME,
+    url: SITE_URL,
+    description: SITE_DESCRIPTION,
+    inLanguage: "en",
+    isAccessibleForFree: true,
+    audience: { "@type": "EducationalAudience", educationalRole: "student" },
+  };
+
   return (
     <main className="flex-1">
+      <JsonLd data={jsonLd} />
       <section className="border-b border-border/60 bg-gradient-to-b from-accent/40 to-transparent">
         <div className="mx-auto w-full max-w-5xl px-4 py-16 text-center sm:py-20">
           <p className="mb-4 inline-flex items-center rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">

@@ -11,6 +11,12 @@ import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
 
+// Auth-gated and user-specific — nothing here should be indexed.
+export const metadata = {
+  title: "Your progress",
+  robots: { index: false, follow: false },
+};
+
 function StatTile({ label, value, hint }) {
   return (
     <Card className="relative overflow-hidden">
