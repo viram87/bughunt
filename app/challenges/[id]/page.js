@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { ChallengeWorkspace } from "@/components/challenge-workspace";
 import { JsonLd } from "@/components/json-ld";
 import { BUG_CATEGORIES, DIFFICULTIES, LANGUAGES } from "@/lib/constants";
-import { SITE_NAME, SITE_URL, absoluteUrl } from "@/lib/site";
+import { SITE_NAME, SITE_URL, absoluteUrl, truncate } from "@/lib/site";
 
 // Without this, Next.js's automatic fetch caching can cache the Supabase
 // auth check itself, showing a stale logged-out state on this route even
@@ -38,15 +38,25 @@ export async function generateMetadata({ params }) {
   // The author-written problem description is real, unique copy, which is
   // far better for search results than a templated blurb.
   const article = /^[aeiou]/i.test(difficulty) ? "An" : "A";
-  const description = `${challenge.problem_description} ${article} ${difficulty.toLowerCase()} ${category.toLowerCase()} bug to find and fix, in your browser.`;
+  // Author-written copy is arbitrary length, so both variants get trimmed to
+  // their platform's limit rather than being truncated mid-word by Google/X.
+  const fullDescription = `${challenge.problem_description} ${article} ${difficulty.toLowerCase()} ${category.toLowerCase()} bug to find and fix, in your browser.`;
+  const description = truncate(fullDescription, 155);
+  const socialDescription = truncate(fullDescription, 120);
   const url = absoluteUrl(`/challenges/${id}`);
 
   return {
     title,
     description,
     alternates: { canonical: url },
-    openGraph: { type: "article", url, title, description, siteName: SITE_NAME },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: {
+      type: "article",
+      url,
+      title,
+      description: socialDescription,
+      siteName: SITE_NAME,
+    },
+    twitter: { card: "summary_large_image", title, description: socialDescription },
   };
 }
 
