@@ -98,3 +98,22 @@ await emit({
   file: "seed_batch2_challenges.sql",
   note: "Second batch: 30 challenges, four per bug category.",
 });
+
+// The combined batch-2 file is ~52KB, which the Supabase SQL Editor can
+// fail to submit ("Load failed"). Also emit it in smaller parts so it can
+// be pasted a chunk at a time. Each part is independent and idempotent in
+// the sense that re-running one only duplicates that part's challenges.
+const CHUNK_SIZE = 6;
+const parts = [];
+for (let i = 0; i < BATCH2.length; i += CHUNK_SIZE) {
+  parts.push(BATCH2.slice(i, i + CHUNK_SIZE));
+}
+
+for (const [index, part] of parts.entries()) {
+  const partNumber = String(index + 1).padStart(2, "0");
+  await emit({
+    challenges: part,
+    file: `seed_batch2_part${partNumber}.sql`,
+    note: `Second batch, part ${index + 1} of ${parts.length} (${part.length} challenges). Run the parts in any order, each exactly once.`,
+  });
+}
