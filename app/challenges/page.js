@@ -55,16 +55,23 @@ export default async function ChallengesPage({ searchParams }) {
 
   const total = challenges?.length ?? 0;
   const solvedShown = challenges?.filter((c) => solved.has(c.id)).length ?? 0;
+  const isFiltered = Boolean(language || bugCategory || difficulty);
+
+  // A raw total advertises how small the library is; a *filtered* count is
+  // genuinely useful ("how many match what I picked"). So only show the
+  // number when it answers a question the reader just asked.
+  const subtitle = isFiltered
+    ? `${total} ${total === 1 ? "challenge matches" : "challenges match"} these filters`
+    : user
+    ? `${solvedShown} solved so far — keep going`
+    : "Filter by language, bug pattern or difficulty";
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Challenges</h1>
-          <p className="text-sm text-muted-foreground">
-            {total} {total === 1 ? "challenge" : "challenges"}
-            {user && total > 0 ? ` · ${solvedShown} solved` : " available"}
-          </p>
+          <p className="text-sm text-muted-foreground">{subtitle}</p>
         </div>
         <Suspense fallback={null}>
           <ChallengeFilters />
