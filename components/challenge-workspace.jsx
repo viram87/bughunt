@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { runChallenge } from "@/lib/code-runner";
 import { BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
@@ -179,6 +180,14 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
           <h1 className="text-2xl font-semibold">{challenge.title}</h1>
         </div>
         <div className="flex items-center gap-3">
+          {isLoggedIn && priorAttempts.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={<Link href={`/challenges/${challenge.id}/attempts`}>Your attempts</Link>}
+            />
+          )}
           {isLoggedIn && (
             <BookmarkButton challengeId={challenge.id} initiallyBookmarked={isBookmarked} />
           )}
