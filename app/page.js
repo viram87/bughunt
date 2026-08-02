@@ -280,7 +280,7 @@ export default async function LandingPage() {
       </section>
 
       {/* Categories */}
-      <section className="mx-auto w-full max-w-5xl px-4 py-16 sm:py-24">
+      <section id="categories" className="mx-auto w-full max-w-5xl px-4 py-16 sm:py-24">
         <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           The bugs you will actually hit
         </h2>
@@ -341,7 +341,7 @@ export default async function LandingPage() {
 
       {/* Final CTA */}
       <section className="border-t border-border/60 bg-gradient-to-b from-transparent to-accent/30">
-        <div className="mx-auto w-full max-w-3xl px-4 py-20 text-center sm:py-24">
+        <div className="mx-auto w-full max-w-3xl px-4 py-16 text-center sm:py-20">
           <h2 className="text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
             Find your first bug in the next five minutes
           </h2>

@@ -11,11 +11,16 @@ export function SiteFooter() {
       <div className="mx-auto w-full max-w-5xl px-4 py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-1">
+            {/* The wordmark is one flex item, not two: as bare text nodes,
+                "Bug" and "Hunt" each became flex children and gap-2 pushed
+                them apart. */}
             <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
               <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <BugIcon className="size-3.5" />
               </span>
-              Bug<span className="-ml-[0.3rem] text-primary">Hunt</span>
+              <span>
+                Bug<span className="text-primary">Hunt</span>
+              </span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
               Free debugging practice for CS students. Fix real bugs, learn the patterns behind
@@ -52,7 +57,9 @@ export function SiteFooter() {
           <div>
             <h3 className="mb-3 text-sm font-medium">Bug patterns</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              {BUG_CATEGORIES.slice(0, 6).map((category) => (
+              {/* Four keeps this column level with the others; the rest are
+                  reachable from the landing page and the filters. */}
+              {BUG_CATEGORIES.slice(0, 4).map((category) => (
                 <li key={category.value}>
                   <Link
                     href={`/challenges?bug_category=${category.value}`}
@@ -62,6 +69,11 @@ export function SiteFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/#categories" className="hover:text-foreground">
+                  All patterns
+                </Link>
+              </li>
             </ul>
           </div>
 

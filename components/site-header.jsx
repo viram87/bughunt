@@ -27,11 +27,16 @@ export function SiteHeader({ user, profile }) {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+        {/* The wordmark must be a single flex item — as bare text nodes,
+            "Bug" and "Hunt" each became flex children and gap-2 pushed a
+            space between them. */}
         <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BugIcon className="size-4" />
           </span>
-          Bug<span className="-ml-[0.35rem] text-primary">Hunt</span>
+          <span>
+            Bug<span className="text-primary">Hunt</span>
+          </span>
         </Link>
 
         {user ? (
