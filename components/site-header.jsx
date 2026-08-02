@@ -40,6 +40,12 @@ export function SiteHeader({ user, profile }) {
               variant="ghost"
               size="sm"
               nativeButton={false}
+              render={<Link href="/challenges">Challenges</Link>}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
               render={<Link href="/dashboard">Dashboard</Link>}
             />
             {profile?.role === "admin" && (
@@ -73,6 +79,14 @@ export function SiteHeader({ user, profile }) {
           </div>
         ) : (
           <div className="flex items-center gap-2">
+            {/* Signed-out visitors land on the marketing page, so they need
+                an explicit route into the list. */}
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/challenges">Challenges</Link>}
+            />
             <ThemeToggle />
             <Button
               variant="ghost"

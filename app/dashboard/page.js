@@ -149,7 +149,7 @@ export default async function DashboardPage() {
       </section>
 
       <p className="mt-10 text-sm text-muted-foreground">
-        <Link href="/" className="underline">
+        <Link href="/challenges" className="underline">
           Browse all challenges
         </Link>
       </p>
