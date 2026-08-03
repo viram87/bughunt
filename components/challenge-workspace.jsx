@@ -61,7 +61,31 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
     [priorAttempts]
   );
 
-  const [code, setCode] = useState(challenge.broken_code);
+  // Multi-file challenges keep a map of filename -> current contents; the
+  // single-file case is modelled as a one-entry map so the rest of the
+  // component has exactly one shape to deal with.
+  const isMultiFile = Array.isArray(challenge.files) && challenge.files.length > 0;
+  const fileList = useMemo(
+    () =>
+      isMultiFile
+        ? challenge.files
+        : [{ name: challenge.language === "python" ? "main.py" : "main.js", broken: challenge.broken_code }],
+    [isMultiFile, challenge.files, challenge.broken_code, challenge.language]
+  );
+
+  const [fileContents, setFileContents] = useState(() =>
+    Object.fromEntries(fileList.map((f) => [f.name, f.broken ?? ""]))
+  );
+  const [activeFile, setActiveFile] = useState(
+    challenge.entry_file ?? fileList[fileList.length - 1].name
+  );
+
+  const code = fileContents[activeFile] ?? "";
+  const setCode = (value) => setFileContents((prev) => ({ ...prev, [activeFile]: value }));
+
+  // What actually gets executed: the whole file set for multi-file, or the
+  // single blob otherwise.
+  const currentFiles = () => fileList.map((f) => ({ name: f.name, code: fileContents[f.name] ?? "" }));
   const [results, setResults] = useState(null);
   const [runnerStatus, setRunnerStatus] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +130,9 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   }
 
   async function handleRunAndCheck() {
-    const codeAtSubmission = code;
+    const codeAtSubmission = isMultiFile
+      ? JSON.stringify(currentFiles(), null, 2)
+      : code;
 
     setSubmitting(true);
     setResults(null);
@@ -115,7 +141,9 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
 
     const { results: testResults } = await runChallenge({
       language: challenge.language,
-      code: codeAtSubmission,
+      code: isMultiFile ? undefined : codeAtSubmission,
+      files: isMultiFile ? currentFiles() : undefined,
+      entryFile: challenge.entry_file,
       functionName: challenge.function_name,
       testCases: challenge.test_cases,
       onStatus: setRunnerStatus,
@@ -213,7 +241,28 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
 
       <Card className="mb-6">
         <CardContent className="p-0">
+          {isMultiFile && (
+            <div className="flex flex-wrap gap-1 border-b p-1.5">
+              {fileList.map((file) => (
+                <button
+                  key={file.name}
+                  onClick={() => setActiveFile(file.name)}
+                  className={`rounded-md px-3 py-1 font-mono text-xs transition-colors ${
+                    activeFile === file.name
+                      ? "bg-primary/12 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  {file.name}
+                  {file.name === challenge.entry_file && (
+                    <span className="ml-1.5 opacity-60">entry</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
           <Editor
+            key={activeFile}
             height="360px"
             language={challenge.language}
             value={code}

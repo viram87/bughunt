@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 
 const STUDENT_SAFE_COLUMNS =
-  "id, title, language, bug_category, difficulty, function_name, broken_code, problem_description, symptom_description, test_cases, status, created_by, created_at, hints(id, hint_order, hint_text)";
+  "id, title, language, bug_category, difficulty, function_name, broken_code, files, entry_file, problem_description, symptom_description, test_cases, status, created_by, created_at, hints(id, hint_order, hint_text)";
 
 export async function GET(request, { params }) {
   const { id } = await params;
@@ -29,7 +29,14 @@ export async function GET(request, { params }) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ data });
+  // Admins get the raw row; everyone else gets the `correct` half of each
+  // file removed, the same way correct_code is withheld.
+  const safe =
+    profile?.role === "admin" || !Array.isArray(data.files)
+      ? data
+      : { ...data, files: data.files.map((f) => ({ name: f.name, broken: f.broken })) };
+
+  return NextResponse.json({ data: safe });
 }
 
 export async function PATCH(request, { params }) {

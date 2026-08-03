@@ -29,7 +29,7 @@ export async function GET(request, { params }) {
 
   const { data, error } = await supabase
     .from("bug_challenges")
-    .select("correct_code, explanation")
+    .select("correct_code, explanation, files, entry_file")
     .eq("id", id)
     .single();
 

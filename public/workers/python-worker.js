@@ -104,6 +104,60 @@ def _bh_trace(fn, args, target):
     })
 `;
 
+// Multi-file support. The files are written into Pyodide's virtual
+// filesystem and imported normally, so `from validators import x` behaves
+// exactly as it would locally — no import shim, no altered semantics.
+//
+// Each run gets its own directory and every challenge module is purged from
+// sys.modules first; otherwise Python's import cache would serve the
+// previous run's version and edits would appear to do nothing.
+const CHALLENGE_DIR = "/challenge";
+
+async function loadFiles(pyodide, files, globals) {
+  try {
+    pyodide.FS.mkdirTree(CHALLENGE_DIR);
+  } catch {
+    // Already exists — fine.
+  }
+
+  const moduleNames = [];
+  for (const file of files) {
+    pyodide.FS.writeFile(`${CHALLENGE_DIR}/${file.name}`, file.code ?? "");
+    if (file.name.endsWith(".py")) moduleNames.push(file.name.replace(/\.py$/, ""));
+  }
+
+  await pyodide.runPythonAsync(
+    `import sys
+if ${JSON.stringify(CHALLENGE_DIR)} not in sys.path:
+    sys.path.insert(0, ${JSON.stringify(CHALLENGE_DIR)})
+for _m in ${JSON.stringify(moduleNames)}:
+    sys.modules.pop(_m, None)`,
+    { globals }
+  );
+}
+
+/**
+ * Loads a challenge's code into `globals` and returns nothing — the caller
+ * then reads functionName off globals. Handles both shapes: a single blob,
+ * or a set of files with an entry module.
+ */
+async function loadChallenge(pyodide, { code, files, entryFile, functionName }, globals) {
+  if (!files || files.length === 0) {
+    await pyodide.runPythonAsync(code, { globals });
+    return;
+  }
+
+  await loadFiles(pyodide, files, globals);
+  const entryModule = String(entryFile ?? files[files.length - 1].name).replace(/\.py$/, "");
+  await pyodide.runPythonAsync(
+    `import importlib
+_entry = importlib.import_module(${JSON.stringify(entryModule)})
+_entry = importlib.reload(_entry)
+${functionName} = getattr(_entry, ${JSON.stringify(functionName)})`,
+    { globals }
+  );
+}
+
 self.onmessage = async (event) => {
   const msg = event.data;
 
@@ -118,7 +172,7 @@ self.onmessage = async (event) => {
   }
 
   if (msg.type === "trace") {
-    const { id, code, functionName, input } = msg;
+    const { id, code, files, entryFile, functionName, input } = msg;
     const pyodide = await getPyodide();
 
     const stdoutChunks = [];
@@ -131,7 +185,7 @@ self.onmessage = async (event) => {
 
     try {
       globals = pyodide.toPy({});
-      await pyodide.runPythonAsync(code, { globals });
+      await loadChallenge(pyodide, { code, files, entryFile, functionName }, globals);
       await pyodide.runPythonAsync(TRACER_SOURCE, { globals });
 
       const fn = globals.get(functionName);
@@ -173,7 +227,7 @@ self.onmessage = async (event) => {
   }
 
   if (msg.type === "run") {
-    const { id, code, functionName, input } = msg;
+    const { id, code, files, entryFile, functionName, input } = msg;
     const pyodide = await getPyodide();
 
     const stdoutChunks = [];
@@ -189,7 +243,7 @@ self.onmessage = async (event) => {
       // in a single "Run & Check" click, and a fresh scope means one test
       // case's leftover variables/functions can never leak into the next.
       globals = pyodide.toPy({});
-      await pyodide.runPythonAsync(code, { globals });
+      await loadChallenge(pyodide, { code, files, entryFile, functionName }, globals);
 
       const fn = globals.get(functionName);
       if (typeof fn !== "function") {

@@ -70,7 +70,7 @@ export default async function ChallengePage({ params }) {
   const { data: challenge, error } = await supabase
     .from("bug_challenges")
     .select(
-      "id, title, language, bug_category, difficulty, function_name, broken_code, problem_description, symptom_description, test_cases, status, hints(id, hint_order, hint_text)"
+      "id, title, language, bug_category, difficulty, function_name, broken_code, files, entry_file, problem_description, symptom_description, test_cases, status, hints(id, hint_order, hint_text)"
     )
     .eq("id", id)
     .order("hint_order", { referencedTable: "hints", ascending: true })
@@ -79,6 +79,16 @@ export default async function ChallengePage({ params }) {
   if (error || !challenge) {
     notFound();
   }
+
+  // `files` carries both the broken and correct version of every file, so the
+  // correct halves are stripped before this reaches the browser — same reason
+  // correct_code is withheld from the student-facing payload.
+  const safeChallenge = {
+    ...challenge,
+    files: Array.isArray(challenge.files)
+      ? challenge.files.map((f) => ({ name: f.name, broken: f.broken }))
+      : null,
+  };
 
   let priorAttempts = [];
   let isBookmarked = false;
@@ -119,7 +129,7 @@ export default async function ChallengePage({ params }) {
     <>
       <JsonLd data={jsonLd} />
       <ChallengeWorkspace
-        challenge={challenge}
+        challenge={safeChallenge}
         isLoggedIn={!!user}
         priorAttempts={priorAttempts}
         isBookmarked={isBookmarked}

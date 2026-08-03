@@ -181,6 +181,10 @@ export function ExecutionTrace({ challenge, userCode }) {
     const result = await traceExecution({
       language: challenge.language,
       code: nextSource === "broken" ? challenge.broken_code : userCode,
+      files: Array.isArray(challenge.files)
+        ? challenge.files.map((f) => ({ name: f.name, code: f.broken ?? "" }))
+        : undefined,
+      entryFile: challenge.entry_file,
       functionName: challenge.function_name,
       input: testCases[nextTestIndex]?.input ?? [],
     });
