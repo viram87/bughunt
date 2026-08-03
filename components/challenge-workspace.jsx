@@ -272,16 +272,7 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
               <p className="text-muted-foreground">Log in to see the explanation and reference solution.</p>
             )}
 
-            {challenge.language === "python" ? (
-              <ExecutionTrace challenge={challenge} userCode={submittedCode} />
-            ) : (
-              // Said explicitly rather than silently omitted, so its absence
-              // reads as a known limitation instead of a broken feature.
-              <p className="rounded-lg border border-dashed px-3 py-2 text-muted-foreground">
-                Step-through execution is Python-only for now — JavaScript has no equivalent of
-                Python&apos;s tracing hook, so it needs a different approach.
-              </p>
-            )}
+            <ExecutionTrace challenge={challenge} userCode={submittedCode} />
           </CardContent>
         </Card>
       )}
