@@ -6,6 +6,7 @@ import { BUG_CATEGORIES } from "@/lib/constants";
 import { computeBadges, computeStreak, computeAverageHints } from "@/lib/badges";
 import { CategoryMasteryChart } from "@/components/category-mastery-chart";
 import { ChallengeCard } from "@/components/challenge-card";
+import { ProfileSettings } from "@/components/profile-settings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -31,7 +32,7 @@ function StatTile({ label, value, hint }) {
 }
 
 export default async function DashboardPage() {
-  const { user } = await getCurrentUser();
+  const { user, profile } = await getCurrentUser();
   if (!user) {
     redirect("/login");
   }
@@ -146,6 +147,13 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="mt-10">
+        <ProfileSettings
+          initialUsername={profile?.username}
+          initialPublic={profile?.profile_public}
+        />
       </section>
 
       <p className="mt-10 text-sm text-muted-foreground">

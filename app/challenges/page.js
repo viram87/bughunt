@@ -2,8 +2,12 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { LANGUAGE_VALUES, BUG_CATEGORY_VALUES, DIFFICULTY_VALUES } from "@/lib/constants";
+import Link from "next/link";
+import { SparklesIcon } from "lucide-react";
 import { ChallengeFilters } from "@/components/challenge-filters";
 import { ChallengeCard } from "@/components/challenge-card";
+import { pickBugOfTheWeek } from "@/lib/bug-of-the-week";
+import { Badge } from "@/components/ui/badge";
 import { absoluteUrl } from "@/lib/site";
 
 // Reads the signed-in user's attempts, so it can't be statically cached.
@@ -66,8 +70,35 @@ export default async function ChallengesPage({ searchParams }) {
     ? `${solvedShown} solved so far — keep going`
     : "Filter by language, bug pattern or difficulty";
 
+  // Only shown on the unfiltered view — it's a starting point, not something
+  // to interrupt a deliberate search with.
+  const featured = isFiltered ? null : pickBugOfTheWeek(challenges ?? []);
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+      {featured && (
+        <Link href={`/challenges/${featured.id}`} className="group mb-8 block">
+          <div className="rounded-xl border border-primary/30 bg-gradient-to-r from-accent/50 to-transparent p-5 transition-all group-hover:-translate-y-0.5 group-hover:border-primary/50">
+            <div className="mb-2 flex items-center gap-2">
+              <Badge className="border-transparent bg-primary/12 text-primary">
+                <SparklesIcon className="size-3" /> Bug of the week
+              </Badge>
+              {solved.has(featured.id) && (
+                <Badge className="border-transparent bg-success/12 text-success">Solved</Badge>
+              )}
+            </div>
+            <p className="text-lg font-semibold transition-colors group-hover:text-primary">
+              {featured.title}
+            </p>
+            {featured.problem_description && (
+              <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">
+                {featured.problem_description}
+              </p>
+            )}
+          </div>
+        </Link>
+      )}
+
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Challenges</h1>

@@ -29,7 +29,20 @@ export default async function sitemap() {
       priority: 0.8,
     }));
 
-    return [...staticRoutes, ...challengeRoutes];
+    // Public profiles are opt-in and genuinely indexable content, so they
+    // belong in the sitemap. The view already filters to opted-in users.
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("username, created_at");
+
+    const profileRoutes = (profiles ?? []).map((profile) => ({
+      url: absoluteUrl(`/u/${profile.username}`),
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.5,
+    }));
+
+    return [...staticRoutes, ...challengeRoutes, ...profileRoutes];
   } catch {
     // A database hiccup shouldn't produce a 500 for crawlers — serve the
     // static routes and let the next revalidation pick up the rest.
