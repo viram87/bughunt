@@ -5,7 +5,10 @@ import { SITE_NAME } from "@/lib/site";
 
 // Site-wide footer. Also does real SEO work: the category and language
 // links give crawlers a path to every filtered view from any page.
-export function SiteFooter() {
+//
+// Takes `user` so the account column matches reality — it previously showed
+// "Create an account" and "Log in" to people who were already signed in.
+export function SiteFooter({ user }) {
   return (
     <footer className="mt-auto border-t border-border/60 bg-card/30">
       <div className="mx-auto w-full max-w-5xl px-4 py-12">
@@ -80,21 +83,33 @@ export function SiteFooter() {
           <div>
             <h3 className="mb-3 text-sm font-medium">Account</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link href="/signup" className="hover:text-foreground">
-                  Create an account
-                </Link>
-              </li>
-              <li>
-                <Link href="/login" className="hover:text-foreground">
-                  Log in
-                </Link>
-              </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-foreground">
-                  Your progress
-                </Link>
-              </li>
+              {user ? (
+                <>
+                  <li>
+                    <Link href="/dashboard" className="hover:text-foreground">
+                      Your progress
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/challenges" className="hover:text-foreground">
+                      Keep practising
+                    </Link>
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    <Link href="/signup" className="hover:text-foreground">
+                      Create an account
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/login" className="hover:text-foreground">
+                      Log in
+                    </Link>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
         </div>

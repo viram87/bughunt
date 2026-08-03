@@ -8,6 +8,7 @@ import { validateChallenge } from "@/lib/challenge-validation";
 import { LANGUAGES, BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
 import { TestCaseEditor, toTestCases, toEditorRows } from "@/components/admin/test-case-editor";
 import { MutationSuggestions } from "@/components/admin/mutation-suggestions";
+import { FileSetEditor } from "@/components/admin/file-set-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -85,6 +86,14 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
     return [0, 1, 2].map((i) => sorted[i]?.hint_text ?? "");
   });
 
+  // Multi-file challenges keep their own file set; single-file ones keep
+  // using broken_code/correct_code exactly as before.
+  const [multiFile, setMultiFile] = useState(() => Array.isArray(challenge?.files) && challenge.files.length > 0);
+  const [files, setFiles] = useState(
+    () => challenge?.files ?? [{ name: "main.py", broken: "", correct: "" }]
+  );
+  const [entryFile, setEntryFile] = useState(challenge?.entry_file ?? "main.py");
+
   const [validation, setValidation] = useState(null);
   const [testing, setTesting] = useState(false);
   const [testStatus, setTestStatus] = useState(null);
@@ -99,8 +108,16 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
   }
 
   const testCases = toTestCases(rows);
+  // Every file needs a name, the entry file has to be one of them, and both
+  // versions of the entry file need content — the runner resolves the
+  // challenge function from there, so an empty entry file can't run at all.
+  const filesReady =
+    files.length > 0 &&
+    files.every((f) => f.name.trim() && f.broken?.trim() && f.correct?.trim()) &&
+    files.some((f) => f.name === entryFile);
   const canTest =
-    Boolean(form.function_name && form.broken_code && form.correct_code) &&
+    Boolean(form.function_name) &&
+    (multiFile ? filesReady : Boolean(form.broken_code && form.correct_code)) &&
     testCases !== null &&
     testCases.length > 0;
 
@@ -115,6 +132,9 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
           functionName: form.function_name,
           brokenCode: form.broken_code,
           correctCode: form.correct_code,
+          brokenFiles: multiFile ? files.map((f) => ({ name: f.name, code: f.broken })) : null,
+          correctFiles: multiFile ? files.map((f) => ({ name: f.name, code: f.correct })) : null,
+          entryFile: multiFile ? entryFile : null,
           testCases,
         },
         setTestStatus
@@ -141,7 +161,23 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
     setSaving(true);
     setError(null);
 
-    const payload = { ...form, status, test_cases: testCases };
+    const comment = form.language === "python" ? "#" : "//";
+    const placeholderSource = `${comment} see ${entryFile} and the other files in this challenge`;
+
+    const payload = {
+      ...form,
+      status,
+      test_cases: testCases,
+      files: multiFile ? files : null,
+      entry_file: multiFile ? entryFile : null,
+      // The columns are NOT NULL, so multi-file challenges still need a
+      // placeholder here; the file set is what actually gets executed.
+      // broken_code/correct_code are NOT NULL, but multi-file challenges keep
+      // their real source in `files`. Comment syntax has to match the
+      // language or the placeholder itself becomes a syntax error.
+      broken_code: multiFile ? placeholderSource : form.broken_code,
+      correct_code: multiFile ? placeholderSource : form.correct_code,
+    };
     delete payload.id;
     delete payload.created_at;
     delete payload.created_by;
@@ -300,8 +336,61 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Code</CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-base">Code</CardTitle>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={multiFile}
+                className="size-4 accent-[var(--primary)]"
+                onChange={(e) => {
+                  const on = e.target.checked;
+                  setMultiFile(on);
+                  setValidation(null);
+                  if (on && files.length === 1 && !files[0].broken && !files[0].correct) {
+                    // Carry any single-file work across rather than losing it.
+                    const name = form.language === "python" ? "main.py" : "main.js";
+                    setFiles([{ name, broken: form.broken_code, correct: form.correct_code }]);
+                    setEntryFile(name);
+                  }
+                }}
+              />
+              Split across multiple files
+            </label>
+          </div>
+          {multiFile && (
+            <p className="text-sm text-muted-foreground">
+              For the harder tier: put the bug in one file and let the symptom show up in another.
+            </p>
+          )}
         </CardHeader>
+        {multiFile ? (
+          <CardContent className="space-y-3">
+            <FileSetEditor
+              files={files}
+              entryFile={entryFile}
+              language={form.language}
+              onChange={(next) => {
+                setFiles(next);
+                setValidation(null);
+              }}
+              onEntryChange={(name) => {
+                setEntryFile(name);
+                setValidation(null);
+              }}
+            />
+            <MutationSuggestions
+              correctCode={files.find((f) => f.name === entryFile)?.correct ?? ""}
+              language={form.language}
+              onApply={(suggestion) => {
+                setFiles((prev) =>
+                  prev.map((f) => (f.name === entryFile ? { ...f, broken: suggestion.broken } : f))
+                );
+                set("bug_category", suggestion.category);
+              }}
+            />
+          </CardContent>
+        ) : (
         <CardContent className="grid gap-4 lg:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Broken code (what students see)</Label>
@@ -341,6 +430,7 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
             />
           </div>
         </CardContent>
+        )}
       </Card>
 
       <Card>

@@ -64,6 +64,10 @@ export const metadata = {
   },
 };
 
+// The shell renders auth state, so it must never be cached — we already
+// hit a stale logged-out render on the challenge page for exactly this reason.
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }) {
   const { user, profile } = await getCurrentUser();
 
@@ -77,7 +81,7 @@ export default async function RootLayout({ children }) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <SiteHeader user={user} profile={profile} />
           {children}
-          <SiteFooter />
+          <SiteFooter user={user} />
           <ServiceWorkerRegister />
         </ThemeProvider>
       </body>

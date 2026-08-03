@@ -65,6 +65,8 @@ export async function POST(request) {
     explanation,
     status,
     function_name,
+    files,
+    entry_file,
   } = body;
 
   if (
@@ -84,6 +86,24 @@ export async function POST(request) {
     return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
   }
 
+  // Multi-file challenges must name an entry file that actually exists —
+  // otherwise the worker fails at run time, which is far harder to diagnose
+  // than a 400 here.
+  if (files != null) {
+    if (!Array.isArray(files) || files.length === 0) {
+      return NextResponse.json({ error: "files must be a non-empty array" }, { status: 400 });
+    }
+    if (files.some((f) => !f?.name)) {
+      return NextResponse.json({ error: "Every file needs a name" }, { status: 400 });
+    }
+    if (!entry_file || !files.some((f) => f.name === entry_file)) {
+      return NextResponse.json(
+        { error: "entry_file must match one of the file names" },
+        { status: 400 }
+      );
+    }
+  }
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bug_challenges")
@@ -100,6 +120,8 @@ export async function POST(request) {
       explanation,
       status: status ?? "draft",
       function_name,
+      files: files ?? null,
+      entry_file: files ? entry_file : null,
       created_by: user.id,
     })
     .select()

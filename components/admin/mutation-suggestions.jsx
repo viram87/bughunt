@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { LightbulbIcon } from "lucide-react";
-import { suggestMutations } from "@/lib/bug-mutations";
+import { suggestMutations, looksLikeWrongLanguage } from "@/lib/bug-mutations";
 import { BUG_CATEGORIES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,11 @@ export function MutationSuggestions({ correctCode, language, onApply }) {
   const suggestions = useMemo(
     () => (open ? suggestMutations(correctCode, language) : []),
     [open, correctCode, language]
+  );
+
+  const wrongLanguage = useMemo(
+    () => open && suggestions.length === 0 && looksLikeWrongLanguage(correctCode, language),
+    [open, suggestions.length, correctCode, language]
   );
 
   const label = (value) => BUG_CATEGORIES.find((c) => c.value === value)?.label ?? value;
@@ -41,10 +46,18 @@ export function MutationSuggestions({ correctCode, language, onApply }) {
       {open && (
         <div className="mt-3 space-y-2">
           {suggestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No obvious injection points found. That usually means the code has no comparisons,
-              conversions or loops to subvert — write the broken version by hand.
-            </p>
+            wrongLanguage ? (
+              <p className="rounded-md bg-warning/12 px-3 py-2 text-sm text-warning-foreground dark:text-warning">
+                Nothing matched for <strong>{language}</strong>, but this code looks like the other
+                language — check the Language dropdown above.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No obvious injection points found. It looks for comparisons ({">="}, {"==="}),
+                conversions (str(), Number()), loop bounds, copies and guards — if the code has
+                none of those, write the broken version by hand.
+              </p>
+            )
           ) : (
             suggestions.map((s, i) => (
               <div key={i} className="rounded-md border p-3">
