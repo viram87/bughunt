@@ -7,6 +7,7 @@ import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
 import { validateChallenge } from "@/lib/challenge-validation";
 import { LANGUAGES, BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
 import { TestCaseEditor, toTestCases, toEditorRows } from "@/components/admin/test-case-editor";
+import { MutationSuggestions } from "@/components/admin/mutation-suggestions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -328,6 +329,16 @@ export function ChallengeForm({ challenge, hints: initialHints }) {
                 options={{ minimap: { enabled: false }, fontSize: 13 }}
               />
             </div>
+          </div>
+          <div className="lg:col-span-2">
+            <MutationSuggestions
+              correctCode={form.correct_code}
+              language={form.language}
+              onApply={(suggestion) => {
+                set("broken_code", suggestion.broken);
+                set("bug_category", suggestion.category);
+              }}
+            />
           </div>
         </CardContent>
       </Card>
