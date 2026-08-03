@@ -7,6 +7,8 @@ import { computeBadges, computeStreak, computeAverageHints } from "@/lib/badges"
 import { CategoryMasteryChart } from "@/components/category-mastery-chart";
 import { ChallengeCard } from "@/components/challenge-card";
 import { ProfileSettings } from "@/components/profile-settings";
+import { NextChallengeCard } from "@/components/next-challenge-card";
+import { pickNextChallenge } from "@/lib/recommend";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -55,7 +57,11 @@ export default async function DashboardPage() {
       .select("bug_challenge_id, bug_challenges(id, title, language, bug_category, difficulty)")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false }),
-    supabase.from("bug_challenges").select("bug_category").eq("status", "published"),
+    // Now also feeds the recommendation, so it needs enough to render a card.
+    supabase
+      .from("bug_challenges")
+      .select("id, title, language, bug_category, difficulty")
+      .eq("status", "published"),
   ]);
 
   const progress = userProgress ?? [];
@@ -86,6 +92,17 @@ export default async function DashboardPage() {
 
   const bookmarkedChallenges = (bookmarks ?? []).map((b) => b.bug_challenges).filter(Boolean);
 
+  const solvedIds = new Set(
+    allAttempts.filter((a) => a.status === "passed").map((a) => a.bug_challenge_id)
+  );
+  const attemptedIds = new Set(allAttempts.map((a) => a.bug_challenge_id));
+  const recommendation = pickNextChallenge({
+    challenges: publishedChallenges ?? [],
+    progress,
+    solvedIds,
+    attemptedIds,
+  });
+
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
       <div className="mb-8">
@@ -94,6 +111,12 @@ export default async function DashboardPage() {
           Where you&apos;re strong, and which bug patterns still trip you up.
         </p>
       </div>
+
+      {recommendation && (
+        <div className="mb-10">
+          <NextChallengeCard recommendation={recommendation} />
+        </div>
+      )}
 
       <div className="mb-10 grid gap-4 sm:grid-cols-3">
         <StatTile label="Challenges solved" value={totalSolved} />

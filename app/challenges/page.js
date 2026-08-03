@@ -25,6 +25,7 @@ export default async function ChallengesPage({ searchParams }) {
   const language = params.language;
   const bugCategory = params.bug_category;
   const difficulty = params.difficulty;
+  const q = typeof params.q === "string" ? params.q.trim() : "";
 
   const { user } = await getCurrentUser();
   const supabase = await createClient();
@@ -38,6 +39,15 @@ export default async function ChallengesPage({ searchParams }) {
   if (LANGUAGE_VALUES.includes(language)) query = query.eq("language", language);
   if (BUG_CATEGORY_VALUES.includes(bugCategory)) query = query.eq("bug_category", bugCategory);
   if (DIFFICULTY_VALUES.includes(difficulty)) query = query.eq("difficulty", difficulty);
+
+  if (q) {
+    // Escape PostgREST's or() delimiters so a query containing a comma or
+    // parenthesis can't alter the filter expression itself.
+    const safe = q.replace(/[,()]/g, " ");
+    query = query.or(
+      `title.ilike.%${safe}%,problem_description.ilike.%${safe}%,symptom_description.ilike.%${safe}%`
+    );
+  }
 
   const { data: challenges, error } = await query;
 
@@ -59,12 +69,14 @@ export default async function ChallengesPage({ searchParams }) {
 
   const total = challenges?.length ?? 0;
   const solvedShown = challenges?.filter((c) => solved.has(c.id)).length ?? 0;
-  const isFiltered = Boolean(language || bugCategory || difficulty);
+  const isFiltered = Boolean(language || bugCategory || difficulty || q);
 
   // A raw total advertises how small the library is; a *filtered* count is
   // genuinely useful ("how many match what I picked"). So only show the
   // number when it answers a question the reader just asked.
-  const subtitle = isFiltered
+  const subtitle = q
+    ? `${total} ${total === 1 ? "result" : "results"} for “${q}”`
+    : isFiltered
     ? `${total} ${total === 1 ? "challenge matches" : "challenges match"} these filters`
     : user
     ? `${solvedShown} solved so far — keep going`
