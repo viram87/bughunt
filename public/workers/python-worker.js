@@ -21,6 +21,89 @@ function describeError(err) {
   return err.message || String(err);
 }
 
+// Python-side tracer, injected into the run's globals. sys.settrace fires on
+// every line; we keep only frames belonging to the challenge's own function
+// so library and harness frames don't pollute the trace.
+//
+// The step cap is a separate guard from the caller's timeout: a tight loop
+// produces steps far faster than it exhausts the clock, so without it memory
+// would balloon well before the timeout fired.
+const TRACER_SOURCE = `
+import sys as _sys, json as _json
+
+_bh_steps = []
+_BH_LIMIT = 5000
+
+def _bh_safe(value):
+    # Round-trips through JSON rather than returning the value directly.
+    # Returning it directly stores a *reference*: for a list or dict that is
+    # later mutated, every earlier snapshot would show the final state, so a
+    # trace of list-mutation code would silently lie about its own history.
+    try:
+        return _json.loads(_json.dumps(value))
+    except Exception:
+        try:
+            return repr(value)
+        except Exception:
+            return "<unrepresentable>"
+
+def _bh_locals(frame):
+    return {k: _bh_safe(v) for k, v in frame.f_locals.items()}
+
+def _bh_make_tracer(target):
+    def _tracer(frame, event, arg):
+        if frame.f_code.co_name != target:
+            return None
+        if len(_bh_steps) >= _BH_LIMIT:
+            return None
+        if event == "line":
+            _bh_steps.append({"line": frame.f_lineno, "locals": _bh_locals(frame)})
+        elif event == "exception":
+            # Mark the step that threw. Without this the return event below
+            # (which fires with arg=None as the exception propagates) would
+            # be reported as "returned None", which is simply untrue.
+            if _bh_steps:
+                exc_type, exc_value = arg[0], arg[1]
+                _bh_steps[-1]["raised"] = "%s: %s" % (exc_type.__name__, exc_value)
+        elif event == "return":
+            # The return event fires on the same line already recorded as a
+            # line event, which would show as two identical steps. Attach the
+            # value to that step rather than appending a duplicate — unless
+            # the frame is unwinding from an exception, in which case there
+            # is no return value to report.
+            if _bh_steps and _bh_steps[-1]["line"] == frame.f_lineno:
+                if "raised" not in _bh_steps[-1]:
+                    _bh_steps[-1]["returned"] = _bh_safe(arg)
+            else:
+                _bh_steps.append({
+                    "line": frame.f_lineno,
+                    "locals": _bh_locals(frame),
+                    "returned": _bh_safe(arg),
+                })
+        return _tracer
+    return _tracer
+
+def _bh_trace(fn, args, target):
+    _bh_steps.clear()
+    error = None
+    result = None
+    _sys.settrace(_bh_make_tracer(target))
+    try:
+        result = fn(*args)
+    except Exception as e:
+        # Keep the steps recorded up to the failure — for a challenge whose
+        # broken version raises, those steps are the whole point.
+        error = "%s: %s" % (type(e).__name__, e)
+    finally:
+        _sys.settrace(None)
+    return _json.dumps({
+        "steps": _bh_steps,
+        "result": _bh_safe(result),
+        "error": error,
+        "truncated": len(_bh_steps) >= _BH_LIMIT,
+    })
+`;
+
 self.onmessage = async (event) => {
   const msg = event.data;
 
@@ -31,6 +114,61 @@ self.onmessage = async (event) => {
     } catch (err) {
       self.postMessage({ type: "init-error", error: describeError(err) });
     }
+    return;
+  }
+
+  if (msg.type === "trace") {
+    const { id, code, functionName, input } = msg;
+    const pyodide = await getPyodide();
+
+    const stdoutChunks = [];
+    pyodide.setStdout({ batched: (s) => stdoutChunks.push(s) });
+
+    let payload = null;
+    let error = null;
+    let globals = null;
+    let pyArgs = [];
+
+    try {
+      globals = pyodide.toPy({});
+      await pyodide.runPythonAsync(code, { globals });
+      await pyodide.runPythonAsync(TRACER_SOURCE, { globals });
+
+      const fn = globals.get(functionName);
+      if (typeof fn !== "function") {
+        throw new Error(`Function "${functionName}" is not defined`);
+      }
+
+      // Same explicit conversion the run path needs — plain JS objects and
+      // arrays arrive in Python as JsProxy otherwise, which isn't subscriptable.
+      pyArgs = input.map((arg) => pyodide.toPy(arg));
+
+      const trace = globals.get("_bh_trace");
+      payload = JSON.parse(trace(fn, pyodide.toPy(pyArgs), functionName));
+
+      if (typeof fn.destroy === "function") fn.destroy();
+      if (typeof trace.destroy === "function") trace.destroy();
+    } catch (err) {
+      error = describeError(err);
+    } finally {
+      pyArgs.forEach((arg) => {
+        if (arg && typeof arg.destroy === "function") arg.destroy();
+      });
+      if (globals && typeof globals.destroy === "function") globals.destroy();
+      pyodide.setStdout({});
+    }
+
+    self.postMessage({
+      type: "trace-result",
+      id,
+      steps: payload?.steps ?? [],
+      result: payload?.result ?? null,
+      truncated: payload?.truncated ?? false,
+      stdout: stdoutChunks.join(""),
+      // A Python-level exception comes back inside the payload; a failure to
+      // even set up the trace comes back in `error`.
+      error: error ?? payload?.error ?? null,
+    });
     return;
   }
 

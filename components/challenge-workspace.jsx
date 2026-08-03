@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { ExecutionTrace } from "@/components/execution-trace";
 
 // Monaco touches `window` at import time, so it can only ever run in the
 // browser — loading it as a Server Component would break the build.
@@ -269,6 +270,17 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
               </>
             ) : (
               <p className="text-muted-foreground">Log in to see the explanation and reference solution.</p>
+            )}
+
+            {challenge.language === "python" ? (
+              <ExecutionTrace challenge={challenge} userCode={submittedCode} />
+            ) : (
+              // Said explicitly rather than silently omitted, so its absence
+              // reads as a known limitation instead of a broken feature.
+              <p className="rounded-lg border border-dashed px-3 py-2 text-muted-foreground">
+                Step-through execution is Python-only for now — JavaScript has no equivalent of
+                Python&apos;s tracing hook, so it needs a different approach.
+              </p>
             )}
           </CardContent>
         </Card>
