@@ -5,8 +5,9 @@ import { LANGUAGE_VALUES, BUG_CATEGORY_VALUES, DIFFICULTY_VALUES } from "@/lib/c
 import Link from "next/link";
 import { SparklesIcon } from "lucide-react";
 import { ChallengeFilters } from "@/components/challenge-filters";
-import { ChallengeCard } from "@/components/challenge-card";
+import { ChallengeGrid } from "@/components/challenge-grid";
 import { pickBugOfTheWeek } from "@/lib/bug-of-the-week";
+import { buildSearchFilter, PAGE_SIZE } from "@/lib/challenge-search";
 import { Badge } from "@/components/ui/badge";
 import { absoluteUrl } from "@/lib/site";
 
@@ -22,54 +23,72 @@ export const metadata = {
 
 export default async function ChallengesPage({ searchParams }) {
   const params = await searchParams;
-  const language = params.language;
-  const bugCategory = params.bug_category;
-  const difficulty = params.difficulty;
+  const language = LANGUAGE_VALUES.includes(params.language) ? params.language : undefined;
+  const bugCategory = BUG_CATEGORY_VALUES.includes(params.bug_category)
+    ? params.bug_category
+    : undefined;
+  const difficulty = DIFFICULTY_VALUES.includes(params.difficulty) ? params.difficulty : undefined;
   const q = typeof params.q === "string" ? params.q.trim() : "";
 
   const { user } = await getCurrentUser();
   const supabase = await createClient();
 
-  let query = supabase
+  const isFiltered = Boolean(language || bugCategory || difficulty || q);
+
+  // Only the FIRST page is rendered on the server; ChallengeGrid loads the
+  // rest as the reader scrolls. Rendering all 104 produced 677KB of HTML and
+  // grew linearly with the library.
+  let firstPage = supabase
     .from("bug_challenges")
-    .select("id, title, language, bug_category, difficulty, problem_description")
+    .select("id, title, language, bug_category, difficulty, problem_description", {
+      count: "exact",
+    })
     .eq("status", "published")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // created_at is not unique — the seeded batches share timestamps to the
+    // second. Ordering by a non-unique column leaves ties in an arbitrary
+    // order that can differ between queries, so paginating shuffled rows
+    // across page boundaries: two challenges were returned twice and two were
+    // never returned at all. The id tiebreaker makes the sort total, which is
+    // what pagination needs to be correct.
+    .order("id", { ascending: false })
+    .range(0, PAGE_SIZE - 1);
 
-  if (LANGUAGE_VALUES.includes(language)) query = query.eq("language", language);
-  if (BUG_CATEGORY_VALUES.includes(bugCategory)) query = query.eq("bug_category", bugCategory);
-  if (DIFFICULTY_VALUES.includes(difficulty)) query = query.eq("difficulty", difficulty);
+  if (language) firstPage = firstPage.eq("language", language);
+  if (bugCategory) firstPage = firstPage.eq("bug_category", bugCategory);
+  if (difficulty) firstPage = firstPage.eq("difficulty", difficulty);
+  if (q) firstPage = firstPage.or(buildSearchFilter(q));
 
-  if (q) {
-    // Escape PostgREST's or() delimiters so a query containing a comma or
-    // parenthesis can't alter the filter expression itself.
-    const safe = q.replace(/[,()]/g, " ");
-    query = query.or(
-      `title.ilike.%${safe}%,problem_description.ilike.%${safe}%,symptom_description.ilike.%${safe}%`
-    );
-  }
+  // Bug of the week indexes into the whole library, so it needs every id — but
+  // only three narrow columns, and only on the unfiltered view where it
+  // actually renders.
+  const bugOfTheWeekQuery = isFiltered
+    ? Promise.resolve({ data: null })
+    : supabase
+        .from("bug_challenges")
+        .select("id, title, problem_description")
+        .eq("status", "published");
 
-  const { data: challenges, error } = await query;
+  // The user's whole attempt history, fetched once. It is one row per
+  // challenge touched, so it stays small, and it lets every page the grid
+  // loads later show its solved/tried state without another request.
+  const attemptsQuery = user
+    ? supabase.from("user_attempts").select("bug_challenge_id, status").eq("user_id", user.id)
+    : Promise.resolve({ data: [] });
 
-  // One extra query gives every card its solved/tried state, which is what
-  // keeps 42 cards from reading as an undifferentiated wall.
+  // Independent queries, so they run concurrently instead of stacking up as
+  // three sequential round trips to Supabase.
+  const [{ data: challenges, error, count }, { data: attempts }, { data: allForFeature }] =
+    await Promise.all([firstPage, attemptsQuery, bugOfTheWeekQuery]);
+
   const solved = new Set();
   const tried = new Set();
-  if (user) {
-    const { data: attempts } = await supabase
-      .from("user_attempts")
-      .select("bug_challenge_id, status")
-      .eq("user_id", user.id);
-
-    for (const attempt of attempts ?? []) {
-      if (attempt.status === "passed") solved.add(attempt.bug_challenge_id);
-      else tried.add(attempt.bug_challenge_id);
-    }
+  for (const attempt of attempts ?? []) {
+    if (attempt.status === "passed") solved.add(attempt.bug_challenge_id);
+    else tried.add(attempt.bug_challenge_id);
   }
 
-  const total = challenges?.length ?? 0;
-  const solvedShown = challenges?.filter((c) => solved.has(c.id)).length ?? 0;
-  const isFiltered = Boolean(language || bugCategory || difficulty || q);
+  const total = count ?? challenges?.length ?? 0;
 
   // A raw total advertises how small the library is; a *filtered* count is
   // genuinely useful ("how many match what I picked"). So only show the
@@ -79,12 +98,12 @@ export default async function ChallengesPage({ searchParams }) {
     : isFiltered
     ? `${total} ${total === 1 ? "challenge matches" : "challenges match"} these filters`
     : user
-    ? `${solvedShown} solved so far — keep going`
+    ? `${solved.size} solved so far — keep going`
     : "Filter by language, bug pattern or difficulty";
 
   // Only shown on the unfiltered view — it's a starting point, not something
   // to interrupt a deliberate search with.
-  const featured = isFiltered ? null : pickBugOfTheWeek(challenges ?? []);
+  const featured = isFiltered ? null : pickBugOfTheWeek(allForFeature ?? []);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
@@ -121,7 +140,9 @@ export default async function ChallengesPage({ searchParams }) {
         </Suspense>
       </div>
 
-      {error && <p className="text-sm text-destructive">Failed to load challenges: {error.message}</p>}
+      {error && (
+        <p className="text-sm text-destructive">Failed to load challenges: {error.message}</p>
+      )}
 
       {!error && total === 0 && (
         <div className="rounded-xl border border-dashed py-16 text-center">
@@ -129,15 +150,18 @@ export default async function ChallengesPage({ searchParams }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
-        {challenges?.map((challenge) => (
-          <ChallengeCard
-            key={challenge.id}
-            challenge={challenge}
-            status={solved.has(challenge.id) ? "solved" : tried.has(challenge.id) ? "tried" : null}
-          />
-        ))}
-      </div>
+      {!error && total > 0 && (
+        <ChallengeGrid
+          // Remount on any filter change so the grid restarts from the new
+          // first page instead of appending onto the previous filter's rows.
+          key={`${language ?? ""}|${bugCategory ?? ""}|${difficulty ?? ""}|${q}`}
+          initialChallenges={challenges ?? []}
+          total={total}
+          filters={{ language, bug_category: bugCategory, difficulty, q: q || undefined }}
+          solvedIds={[...solved]}
+          triedIds={[...tried]}
+        />
+      )}
     </main>
   );
 }
