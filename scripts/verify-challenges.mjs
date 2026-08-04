@@ -11,6 +11,16 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { BATCH2 } from "../lib/seed-data/batch2-challenges.mjs";
+import { BATCH3 } from "../lib/seed-data/batch3-challenges.mjs";
+
+// Verify one batch or all of them: node scripts/verify-challenges.mjs [batch3]
+const BATCHES = { batch2: BATCH2, batch3: BATCH3 };
+const selected = process.argv[2];
+const CHALLENGES = selected ? BATCHES[selected] : [...BATCH2, ...BATCH3];
+if (!CHALLENGES) {
+  console.error(`Unknown batch "${selected}". Options: ${Object.keys(BATCHES).join(", ")}`);
+  process.exit(1);
+}
 
 const run = promisify(execFile);
 const TIMEOUT_MS = 5000;
@@ -79,7 +89,7 @@ async function runVariant(challenge, variant) {
 
 let failures = 0;
 
-for (const [index, challenge] of BATCH2.entries()) {
+for (const [index, challenge] of CHALLENGES.entries()) {
   const brokenResults = await runVariant(challenge, "broken");
   const correctResults = await runVariant(challenge, "correct");
 
@@ -110,7 +120,7 @@ for (const [index, challenge] of BATCH2.entries()) {
 }
 
 console.log(
-  `\n${BATCH2.length - failures}/${BATCH2.length} challenges valid` +
+  `\n${CHALLENGES.length - failures}/${CHALLENGES.length} challenges valid` +
     (failures ? ` — ${failures} need fixing` : " — all good")
 );
 process.exit(failures ? 1 : 0);

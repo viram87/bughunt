@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { CHALLENGES } from "../lib/seed-data/phase3-challenges.mjs";
 import { BATCH2 } from "../lib/seed-data/batch2-challenges.mjs";
+import { BATCH3 } from "../lib/seed-data/batch3-challenges.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -115,5 +116,23 @@ for (const [index, part] of parts.entries()) {
     challenges: part,
     file: `seed_batch2_part${partNumber}.sql`,
     note: `Second batch, part ${index + 1} of ${parts.length} (${part.length} challenges). Run the parts in any order, each exactly once.`,
+  });
+}
+
+// Batch 3 is 60 challenges — far too large for one paste. Emit parts only,
+// sized to stay well under the ~11KB that has worked reliably in the
+// Supabase SQL Editor.
+const BATCH3_CHUNK = 5;
+const batch3Parts = [];
+for (let i = 0; i < BATCH3.length; i += BATCH3_CHUNK) {
+  batch3Parts.push(BATCH3.slice(i, i + BATCH3_CHUNK));
+}
+
+for (const [index, part] of batch3Parts.entries()) {
+  const partNumber = String(index + 1).padStart(2, "0");
+  await emit({
+    challenges: part,
+    file: `seed_batch3_part${partNumber}.sql`,
+    note: `Third batch, part ${index + 1} of ${batch3Parts.length} (${part.length} challenges). Run the parts in any order, each exactly once.`,
   });
 }
