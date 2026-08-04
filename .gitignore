@@ -42,3 +42,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated seed SQL. The source of truth is lib/seed-data/*.mjs — recreate
+# with `node scripts/generate-seed-sql.mjs` when you need to paste into the
+# Supabase SQL Editor. Not tracked, because they are build artifacts that go
+# stale the moment the source changes.
+supabase/seed_phase3_challenges.sql
+supabase/seed_batch2_part*.sql
+supabase/seed_batch3_part*.sql

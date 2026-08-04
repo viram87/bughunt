@@ -46,11 +46,29 @@ Set these in `.env.local` (never committed):
 
 Run the migrations in order in the Supabase SQL Editor:
 
-1. `supabase/migrations/0001_init.sql` — tables, RLS policies, auth-sync trigger
-2. `supabase/migrations/0002_add_function_name.sql` — entry-point column the runner calls
-3. `supabase/migrations/0003_challenge_analytics.sql` — aggregate view for the admin panel
+Run every file in `supabase/migrations/` in order:
 
-Then optionally seed starter content with `supabase/seed_phase1_smoke_test.sql` (2 challenges) and `supabase/seed_phase3_challenges.sql` (8 more).
+1. `0001_init.sql` — tables, RLS policies, auth-sync trigger
+2. `0002_add_function_name.sql` — entry-point column the runner calls
+3. `0003_challenge_analytics.sql` — aggregate view for the admin panel
+4. `0004_public_profiles.sql` — opt-in public profiles
+5. `0005_multi_file_challenges.sql` — multi-file challenge support
+6. `0006_challenge_reports.sql` — reader-submitted challenge reports
+
+Then seed content. The challenge SQL is **generated, not committed** — build it first:
+
+```bash
+node scripts/generate-seed-sql.mjs
+```
+
+That writes `seed_phase3_challenges.sql` and the `seed_batch2_part*` /
+`seed_batch3_part*` files into `supabase/`. Paste them into the SQL Editor one
+at a time; they are split into ~10KB parts because a single combined file is
+large enough that the editor fails to submit it.
+
+Two seed files are hand-written and committed: `seed_phase1_smoke_test.sql`
+(2 starter challenges) and `seed_multifile_example.sql` (one multi-file
+challenge per language, run after migration 0005).
 
 ### Google OAuth
 
@@ -78,11 +96,18 @@ Test-case format notes:
 
 ## Regenerating seed SQL
 
-`lib/seed-data/phase3-challenges.mjs` is the source of truth for the bundled starter challenges. To regenerate the SQL:
+The files in `lib/seed-data/` are the source of truth for every bundled
+challenge. The SQL is a build artifact — it is gitignored, because a committed
+copy goes stale the moment the source changes. Recreate it any time with:
 
 ```bash
 node scripts/generate-seed-sql.mjs
 ```
+
+Every challenge is executed before it ships: the broken version must fail at
+least one test and the correct version must pass all of them. Run
+`node scripts/verify-challenges.mjs` to check them, or pass `batch3` to check
+one batch.
 
 ## Notes
 
