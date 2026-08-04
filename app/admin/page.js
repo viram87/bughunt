@@ -3,6 +3,7 @@ import { PlusIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
 import { DeleteChallengeButton } from "@/components/admin/delete-challenge-button";
+import { ReportsPanel } from "@/components/admin/reports-panel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +23,25 @@ function label(list, value) {
 export default async function AdminPage() {
   const supabase = await createClient();
 
-  const { data: rows, error } = await supabase
-    .from("challenge_analytics")
-    .select("*")
-    .order("title", { ascending: true });
+  // Independent queries, so they run together rather than one after the other.
+  const [{ data: rows, error }, { data: reports }] = await Promise.all([
+    supabase.from("challenge_analytics").select("*").order("title", { ascending: true }),
+    supabase
+      .from("challenge_reports")
+      .select("id, bug_challenge_id, reason, details, created_at")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const openReports = reports ?? [];
 
   const analytics = rows ?? [];
+
+  // The reports table stores only the challenge id; the analytics view already
+  // has every title, so naming them costs no extra query. The view exposes the
+  // id as bug_challenge_id (see migration 0003), not id.
+  const titles = Object.fromEntries(analytics.map((r) => [r.bug_challenge_id, r.title]));
 
   // Most-failed first, but only challenges anyone has actually attempted —
   // failure_rate_pct is null when untouched, which is why the view
@@ -68,6 +82,26 @@ export default async function AdminPage() {
         <p className="mb-6 text-sm text-destructive">
           Failed to load analytics: {error.message}. Has migration 0003 been run?
         </p>
+      )}
+
+      {openReports.length > 0 && (
+        <Card className="mb-8 ring-warning/40">
+          <CardHeader>
+            <CardTitle className="text-base">
+              Open reports
+              <Badge className="ml-2 border-transparent bg-warning/15 text-warning-foreground dark:text-warning">
+                {openReports.length}
+              </Badge>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Readers telling you a challenge is wrong or confusing. Verification proves the code
+              runs; only this tells you whether the explanation lands.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ReportsPanel initialReports={openReports} titles={titles} />
+          </CardContent>
+        </Card>
       )}
 
       <div className="mb-8 grid gap-4 lg:grid-cols-2">

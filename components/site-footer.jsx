@@ -114,11 +114,30 @@ export function SiteFooter({ user }) {
           </div>
         </div>
 
-        <div className="mt-10 flex flex-col gap-2 border-t border-border/60 pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {new Date().getFullYear()} {SITE_NAME}
-          </p>
-          <p>Runs entirely in your browser. Your code never leaves your machine.</p>
+        <div className="mt-10 space-y-4 border-t border-border/60 pt-6 text-sm text-muted-foreground">
+          {/* Legal links belong in the footer on every page — it's where people
+              look for them, and Google's OAuth review expects a reachable
+              privacy policy. */}
+          <nav className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link href="/about" className="hover:text-foreground">
+              About
+            </Link>
+            <Link href="/privacy" className="hover:text-foreground">
+              Privacy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground">
+              Terms
+            </Link>
+            <Link href="/contact" className="hover:text-foreground">
+              Contact
+            </Link>
+          </nav>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              © {new Date().getFullYear()} {SITE_NAME}
+            </p>
+            <p>Your code runs in your browser, never on our servers.</p>
+          </div>
         </div>
       </div>
     </footer>

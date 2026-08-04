@@ -7,6 +7,7 @@ import { runChallenge } from "@/lib/code-runner";
 import { BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ReportChallenge } from "@/components/report-challenge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { ExecutionTrace } from "@/components/execution-trace";
@@ -350,6 +351,13 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
           })}
         </CardContent>
       </Card>
+
+      {/* Last thing on the page: by the time someone has worked through the
+          challenge and read the explanation, they know whether it made sense.
+          That's the moment the feedback is worth asking for. */}
+      <div className="mt-8 border-t pt-6">
+        <ReportChallenge challengeId={challenge.id} />
+      </div>
     </main>
   );
 }

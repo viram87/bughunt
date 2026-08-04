@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { Analytics } from "@vercel/analytics/next";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { ThemeProvider } from "@/components/theme-provider";
 import { getCurrentUser } from "@/lib/auth";
@@ -83,6 +84,9 @@ export default async function RootLayout({ children }) {
           {children}
           <SiteFooter user={user} />
           <ServiceWorkerRegister />
+          {/* Aggregate page views only — no cookies, no cross-site tracking.
+              Free on the Hobby plan, which keeps the zero-cost constraint. */}
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>

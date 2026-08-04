@@ -43,7 +43,7 @@ const FEATURES = [
   {
     icon: TerminalIcon,
     title: "Runs in your browser",
-    body: "Python runs through WebAssembly and JavaScript in a sandboxed worker, right in the tab. Nothing to install, nothing to configure, and your code never leaves your machine.",
+    body: "Python runs through WebAssembly and JavaScript in a sandboxed worker, right in the tab. Nothing to install, nothing to configure, and no server ever executes your code.",
   },
   {
     icon: GraduationCapIcon,
