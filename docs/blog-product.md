@@ -3,6 +3,8 @@ title: "Nobody teaches you to debug"
 published: false
 description: "Courses grade you on writing code. Almost none grade you on fixing it — which is most of the job. So I built free debugging practice that runs in your browser."
 tags: beginners, learning, python, javascript
+# cover_image only works in dev.to's markdown editor. In the default
+# editor use "Add a cover image" and upload docs/cover-debugging.png instead.
 cover_image: https://trybughunt.vercel.app/blog-cover/debugging
 ---
 

@@ -3,6 +3,8 @@ title: "4 things that surprised me running Python in the browser"
 published: false
 description: "I run Python client-side with Pyodide — no backend executes any code. Here are the four gotchas that cost me the most time."
 tags: python, webassembly, javascript, webdev
+# cover_image only works in dev.to's markdown editor. In the default
+# editor use "Add a cover image" and upload docs/cover-pyodide.png instead.
 cover_image: https://trybughunt.vercel.app/blog-cover/pyodide
 ---
 
