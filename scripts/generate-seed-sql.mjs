@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Generates supabase/seed_phase3_challenges.sql from lib/seed-data/phase3-challenges.mjs
-// — the single source of truth also used by app/dev/seed-validation/page.js.
+// Generates the seed SQL from lib/seed-data/*.mjs — the single source of truth,
+// also consumed by scripts/verify-challenges.mjs.
 // Run with: node scripts/generate-seed-sql.mjs
 
 import { writeFile } from "node:fs/promises";
@@ -94,16 +94,11 @@ await emit({
   note: "Original batch. Skips the two already seeded in Phase 1.",
 });
 
-await emit({
-  challenges: BATCH2,
-  file: "seed_batch2_challenges.sql",
-  note: "Second batch: 30 challenges, four per bug category.",
-});
-
-// The combined batch-2 file is ~52KB, which the Supabase SQL Editor can
-// fail to submit ("Load failed"). Also emit it in smaller parts so it can
-// be pasted a chunk at a time. Each part is independent and idempotent in
-// the sense that re-running one only duplicates that part's challenges.
+// Emitted only as parts. A single combined file came to ~52KB, which the
+// Supabase SQL Editor fails to submit ("Load failed") — so the combined
+// version was deleted rather than left sitting next to the working files
+// inviting someone to use it. Each part is independent, and re-running one
+// only duplicates that part's challenges.
 const CHUNK_SIZE = 6;
 const parts = [];
 for (let i = 0; i < BATCH2.length; i += CHUNK_SIZE) {
