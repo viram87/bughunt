@@ -26,7 +26,7 @@ export function SiteHeader({ user, profile }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-2 px-3 py-3 sm:px-4">
         {/* The wordmark must be a single flex item — as bare text nodes,
             "Bug" and "Hunt" each became flex children and gap-2 pushed a
             space between them. */}
@@ -40,28 +40,34 @@ export function SiteHeader({ user, profile }) {
         </Link>
 
         {user ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <Button
               variant="ghost"
               size="sm"
               nativeButton={false}
               render={<Link href="/challenges">Challenges</Link>}
             />
-            <Button
-              variant="ghost"
-              size="sm"
-              nativeButton={false}
-              render={<Link href="/dashboard">Dashboard</Link>}
-            />
-            {profile?.role === "admin" && (
+            <span className="hidden sm:inline-flex">
               <Button
                 variant="ghost"
                 size="sm"
                 nativeButton={false}
-                render={<Link href="/admin">Admin</Link>}
+                render={<Link href="/dashboard">Dashboard</Link>}
               />
+            </span>
+            {profile?.role === "admin" && (
+              <span className="hidden sm:inline-flex">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  nativeButton={false}
+                  render={<Link href="/admin">Admin</Link>}
+                />
+              </span>
             )}
-            <ThemeToggle />
+            <span className="hidden sm:inline-flex">
+              <ThemeToggle />
+            </span>
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none">
                 <Avatar className="h-8 w-8">
@@ -78,12 +84,27 @@ export function SiteHeader({ user, profile }) {
                     <span className="ml-2 text-xs text-muted-foreground">admin</span>
                   )}
                 </DropdownMenuItem>
+                {/* Duplicated from the row above, which is hidden below sm so
+                    the header fits a 375px phone. These are the only route to
+                    them on a narrow screen. */}
+                <DropdownMenuItem
+                  className="sm:hidden"
+                  nativeButton={false}
+                  render={<Link href="/dashboard">Dashboard</Link>}
+                />
+                {profile?.role === "admin" && (
+                  <DropdownMenuItem
+                    className="sm:hidden"
+                    nativeButton={false}
+                    render={<Link href="/admin">Admin</Link>}
+                  />
+                )}
                 <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Signed-out visitors land on the marketing page, so they need
                 an explicit route into the list. */}
             <Button
@@ -92,7 +113,9 @@ export function SiteHeader({ user, profile }) {
               nativeButton={false}
               render={<Link href="/challenges">Challenges</Link>}
             />
-            <ThemeToggle />
+            <span className="hidden sm:inline-flex">
+              <ThemeToggle />
+            </span>
             <Button
               variant="ghost"
               size="sm"
