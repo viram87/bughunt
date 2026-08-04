@@ -95,6 +95,9 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [solved, setSolved] = useState(Boolean(lastPassedAttempt));
   const [solutionData, setSolutionData] = useState(null);
+  // Whether this viewer may see correct_code (signed in and passed, or admin).
+  // The explanation now comes back either way.
+  const [entitled, setEntitled] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   // Frozen snapshot of whatever was actually tested, so the diff view
   // doesn't shift under you as you keep editing after passing — starts
@@ -111,7 +114,7 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   // is initialized from attempt history, but that doesn't by itself fetch
   // the solution — only a fresh passing Run & Check did, until now.
   useEffect(() => {
-    if (solved && isLoggedIn && !solutionData) {
+    if (solved && !solutionData) {
       fetchSolution();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,8 +128,9 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   async function fetchSolution() {
     const res = await fetch(`/api/bug-challenges/${challenge.id}/solution`);
     if (res.ok) {
-      const { data } = await res.json();
+      const { data, entitled: isEntitled } = await res.json();
       setSolutionData(data);
+      setEntitled(Boolean(isEntitled));
     }
   }
 
@@ -186,7 +190,7 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
 
     if (allPassed) {
       setSolved(true);
-      if (isLoggedIn) fetchSolution();
+      fetchSolution();
     }
   }
 
@@ -301,25 +305,51 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
           <CardContent className="space-y-3 text-sm">
             {solutionData ? (
               <>
+                {/* The explanation is the thing this site exists to give you,
+                    so it is shown to everyone who solves the challenge —
+                    signed in or not. Only correct_code stays gated, because
+                    the server can't verify a signed-out solve. */}
                 <p>{solutionData.explanation}</p>
-                <Button variant="outline" size="sm" onClick={() => setShowDiff((v) => !v)}>
-                  {showDiff ? "Hide" : "Show"} diff vs. reference solution
-                </Button>
-                {showDiff && (
-                  <div className="overflow-hidden rounded-md border">
-                    <DiffEditor
-                      height="300px"
-                      language={challenge.language}
-                      original={submittedCode}
-                      modified={solutionData.correct_code}
-                      theme="vs-dark"
-                      options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }}
-                    />
+
+                {entitled ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={() => setShowDiff((v) => !v)}>
+                      {showDiff ? "Hide" : "Show"} diff vs. reference solution
+                    </Button>
+                    {showDiff && (
+                      <div className="overflow-hidden rounded-md border">
+                        <DiffEditor
+                          height="300px"
+                          language={challenge.language}
+                          original={submittedCode}
+                          modified={solutionData.correct_code}
+                          theme="vs-dark"
+                          options={{ readOnly: true, minimap: { enabled: false }, fontSize: 13 }}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-dashed p-3">
+                    <p className="font-medium text-foreground">Nice — you found it.</p>
+                    <p className="mt-1">
+                      Create a free account to compare your fix with the reference solution, keep
+                      your progress, and see which bug patterns you keep hitting.
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <Button size="sm" nativeButton={false} render={<Link href="/signup">Sign up free</Link>} />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        nativeButton={false}
+                        render={<Link href="/login">Log in</Link>}
+                      />
+                    </div>
                   </div>
                 )}
               </>
             ) : (
-              <p className="text-muted-foreground">Log in to see the explanation and reference solution.</p>
+              <p className="text-muted-foreground">Loading the explanation…</p>
             )}
 
             <ExecutionTrace challenge={challenge} userCode={submittedCode} />
