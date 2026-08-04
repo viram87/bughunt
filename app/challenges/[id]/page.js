@@ -16,6 +16,16 @@ function labelFor(list, value) {
   return list.find((x) => x.value === value)?.label ?? value;
 }
 
+// Matches the error names that actually appear in search queries. Deliberately
+// a fixed list rather than a loose pattern: a greedy regex over author prose
+// produces noise, and keyword spam is worse than no keywords.
+const ERROR_NAMES =
+  /\b(IndexError|KeyError|TypeError|ValueError|AttributeError|NameError|UnboundLocalError|ZeroDivisionError|StopIteration|RecursionError|ReferenceError|SyntaxError|RangeError|NaN|undefined|None)\b/g;
+
+function extractErrorSignatures(text) {
+  return [...new Set((text ?? "").match(ERROR_NAMES) ?? [])];
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -35,19 +45,35 @@ export async function generateMetadata({ params }) {
   const difficulty = labelFor(DIFFICULTIES, challenge.difficulty);
 
   const title = `${challenge.title} — ${language} debugging challenge`;
-  // The author-written problem description is real, unique copy, which is
-  // far better for search results than a templated blurb.
+
+  // Lead the description with the SYMPTOM, not the spec. symptom_description
+  // is where the literal error text lives ("IndexError: string index out of
+  // range", "Cannot read properties of undefined"), and that is what someone
+  // actually types into Google at 2am. The problem description explains what
+  // the function should do, which nobody searches for.
   const article = /^[aeiou]/i.test(difficulty) ? "An" : "A";
+  const fullDescription = `${challenge.symptom_description} ${article} ${difficulty.toLowerCase()} ${category.toLowerCase()} bug to find and fix in your browser, with the explanation afterwards.`;
   // Author-written copy is arbitrary length, so both variants get trimmed to
   // their platform's limit rather than being truncated mid-word by Google/X.
-  const fullDescription = `${challenge.problem_description} ${article} ${difficulty.toLowerCase()} ${category.toLowerCase()} bug to find and fix, in your browser.`;
   const description = truncate(fullDescription, 155);
+
+  // Error identifiers pulled out of the author's own text — no invented
+  // keywords, just the strings already on the page made explicit.
+  const errorSignatures = extractErrorSignatures(
+    `${challenge.symptom_description} ${challenge.problem_description}`
+  );
   const socialDescription = truncate(fullDescription, 120);
   const url = absoluteUrl(`/challenges/${id}`);
 
   return {
     title,
     description,
+    keywords: [
+      ...errorSignatures,
+      `${language} debugging`,
+      `${category.toLowerCase()} ${language}`,
+      "debugging practice",
+    ],
     alternates: { canonical: url },
     openGraph: {
       type: "article",

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { absoluteUrl } from "@/lib/site";
+import { BUG_PATTERNS } from "@/lib/bug-patterns";
 
 // Regenerate hourly rather than per-request: challenges change rarely, and
 // this keeps crawler traffic from hitting the database every time.
@@ -9,6 +10,14 @@ export default async function sitemap() {
   const staticRoutes = [
     { url: absoluteUrl("/"), changeFrequency: "daily", priority: 1 },
     { url: absoluteUrl("/challenges"), changeFrequency: "daily", priority: 0.9 },
+    { url: absoluteUrl("/bugs"), changeFrequency: "weekly", priority: 0.9 },
+    // The landing pages are the main organic entry points, so they rank
+    // alongside /challenges rather than below the legal pages.
+    ...BUG_PATTERNS.map((p) => ({
+      url: absoluteUrl(`/bugs/${p.slug}`),
+      changeFrequency: "weekly",
+      priority: 0.85,
+    })),
     { url: absoluteUrl("/about"), changeFrequency: "monthly", priority: 0.6 },
     { url: absoluteUrl("/privacy"), changeFrequency: "yearly", priority: 0.3 },
     { url: absoluteUrl("/terms"), changeFrequency: "yearly", priority: 0.3 },

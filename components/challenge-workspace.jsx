@@ -8,6 +8,7 @@ import { BUG_CATEGORIES, DIFFICULTIES } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ReportChallenge } from "@/components/report-challenge";
+import { PATTERN_BY_CATEGORY } from "@/lib/bug-patterns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { ExecutionTrace } from "@/components/execution-trace";
@@ -200,6 +201,10 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
 
   const categoryLabel = BUG_CATEGORIES.find((c) => c.value === challenge.bug_category)?.label ?? challenge.bug_category;
   const difficultyLabel = DIFFICULTIES.find((d) => d.value === challenge.difficulty)?.label ?? challenge.difficulty;
+  const patternInfo = PATTERN_BY_CATEGORY[challenge.bug_category];
+  const pattern = patternInfo
+    ? { ...patternInfo, article: /^[aeiou]/i.test(patternInfo.title) ? "an" : "a" }
+    : null;
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-8">
@@ -381,6 +386,28 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
           })}
         </CardContent>
       </Card>
+
+      {/* Sends the reader to the pattern behind this one bug, which is the
+          thing actually worth learning — and gives every challenge page an
+          internal link to the landing pages that can rank. */}
+      {pattern && (
+        <div className="mt-8 rounded-xl border border-dashed p-4">
+          <p className="text-sm font-medium">This is {pattern.article} {pattern.title.toLowerCase()} bug</p>
+          <p className="mt-1 text-sm text-muted-foreground">{pattern.blurb}</p>
+          <div className="mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              nativeButton={false}
+              render={
+                <Link href={`/bugs/${pattern.slug}`}>
+                  Learn the {pattern.title.toLowerCase()} pattern
+                </Link>
+              }
+            />
+          </div>
+        </div>
+      )}
 
       {/* Last thing on the page: by the time someone has worked through the
           challenge and read the explanation, they know whether it made sense.

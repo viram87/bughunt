@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BugIcon } from "lucide-react";
-import { BUG_CATEGORIES, LANGUAGES } from "@/lib/constants";
+import { LANGUAGES } from "@/lib/constants";
+import { BUG_PATTERNS } from "@/lib/bug-patterns";
 import { SITE_NAME } from "@/lib/site";
 
 // Site-wide footer. Also does real SEO work: the category and language
@@ -62,19 +63,21 @@ export function SiteFooter({ user }) {
             <ul className="space-y-2 text-sm text-muted-foreground">
               {/* Four keeps this column level with the others; the rest are
                   reachable from the landing page and the filters. */}
-              {BUG_CATEGORIES.slice(0, 4).map((category) => (
-                <li key={category.value}>
-                  <Link
-                    href={`/challenges?bug_category=${category.value}`}
-                    className="hover:text-foreground"
-                  >
-                    {category.label}
+              {/* These point at the /bugs landing pages, not the filtered
+                  list. The filter URLs all canonical back to /challenges, so
+                  linking them sitewide spent internal link equity on a page
+                  that then disclaims it. The landing pages are the organic
+                  entry points and are where it should go. */}
+              {BUG_PATTERNS.slice(0, 4).map((pattern) => (
+                <li key={pattern.slug}>
+                  <Link href={`/bugs/${pattern.slug}`} className="hover:text-foreground">
+                    {pattern.title}
                   </Link>
                 </li>
               ))}
               <li>
-                <Link href="/#categories" className="hover:text-foreground">
-                  All patterns
+                <Link href="/bugs" className="hover:text-foreground">
+                  All bug patterns
                 </Link>
               </li>
             </ul>
