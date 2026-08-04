@@ -3,6 +3,7 @@ title: "Nobody teaches you to debug"
 published: false
 description: "Courses grade you on writing code. Almost none grade you on fixing it — which is most of the job. So I built free debugging practice that runs in your browser."
 tags: beginners, learning, python, javascript
+cover_image: https://trybughunt.vercel.app/blog-cover/debugging
 ---
 
 You've been here.
@@ -34,10 +35,12 @@ This is the thing that changed how I think about it.
 
 Almost every bug is one of a small number of patterns:
 
-- The loop that runs one time too many
-- The check that treats a valid `0` as missing
-- The closure where every callback sees the last value
-- The "copy" that's actually the same object
+| the shape | what you see |
+|---|---|
+| 🔁 Loop runs one time too many | `IndexError` on the last item |
+| 0️⃣ A valid `0` treated as missing | Setting it to zero has no effect |
+| 🔒 Closure captures the variable, not the value | Every callback reports the last one |
+| 📋 A "copy" that's the same object | Editing the copy changes the original |
 
 Once you can recognise the shape, you stop debugging line by line and start
 recognising. **The next one takes minutes instead of an afternoon.**
@@ -55,6 +58,11 @@ bug in it.
 You get the **symptom**, not the cause:
 
 > `last_char("hello")` raises `IndexError: string index out of range`
+
+```python
+def last_char(text):
+    return text[len(text)]     # ← one character too far
+```
 
 You find it. Fix it in the browser. Run it against the test cases.
 

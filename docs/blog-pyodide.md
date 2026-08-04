@@ -3,6 +3,7 @@ title: "4 things that surprised me running Python in the browser"
 published: false
 description: "I run Python client-side with Pyodide — no backend executes any code. Here are the four gotchas that cost me the most time."
 tags: python, webassembly, javascript, webdev
+cover_image: https://trybughunt.vercel.app/blog-cover/pyodide
 ---
 
 I built a debugging-practice site where student code runs **entirely in the
@@ -41,11 +42,11 @@ This one passed my entire test suite while being broken in production.
 pyodide.toPy(null)
 ```
 
-```python
-type(v)     # JsNull
-bool(v)     # False   ← falsy, as you'd expect
-v is None   # False   ← surprise
-```
+| check | result | |
+|---|---|---|
+| `type(v)` | `JsNull` | |
+| `bool(v)` | `False` | ✅ falsy, as expected |
+| `v is None` | `False` | ❌ the surprise |
 
 It's falsy, so truthiness checks work fine. But `is None` fails — which was
 exactly what my code was checking.
@@ -88,6 +89,15 @@ A user screenshot exposed this one.
 
 Every step in the trace showed the **final** state of a list. Step 1 included
 mutations that hadn't happened yet.
+
+```diff
+  tracing:  nums = []; nums.append(1); nums.append(2)
+
+- what the trace showed        + what actually happened
+- step 1   nums = [1, 2]       + step 1   nums = []
+- step 2   nums = [1, 2]       + step 2   nums = [1]
+- step 3   nums = [1, 2]       + step 3   nums = [1, 2]
+```
 
 `frame.f_locals` gives you **references**. Snapshot a list and you've stored a
 pointer to something the program keeps mutating.
