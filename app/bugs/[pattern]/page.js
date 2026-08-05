@@ -184,6 +184,22 @@ export default async function BugPatternPage({ params }) {
         )}
       </section>
 
+      <section className="mt-12 rounded-xl border border-dashed p-5">
+        <h2 className="text-lg font-semibold text-foreground">Stuck on your own code?</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Paste it into the visualizer and watch it run line by line, with every variable at every
+          step. Free, and it runs in your browser.
+        </p>
+        <div className="mt-3">
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href="/visualize">Open the Python visualizer</Link>}
+          />
+        </div>
+      </section>
+
       <section className="mt-12 border-t pt-8">
         <h2 className="mb-4 text-lg font-semibold text-foreground">Other bug patterns</h2>
         {/* Internal links: gives crawlers a path between every landing page,

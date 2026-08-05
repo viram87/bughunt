@@ -55,6 +55,11 @@ export function SiteFooter({ user }) {
                   Beginner friendly
                 </Link>
               </li>
+              <li>
+                <Link href="/visualize" className="hover:text-foreground">
+                  Python visualizer
+                </Link>
+              </li>
             </ul>
           </div>
 

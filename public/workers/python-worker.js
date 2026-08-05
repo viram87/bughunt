@@ -29,9 +29,11 @@ function describeError(err) {
 // produces steps far faster than it exhausts the clock, so without it memory
 // would balloon well before the timeout fired.
 const TRACER_SOURCE = `
-import sys as _sys, json as _json
+import sys as _sys, json as _json, types as _types
 
 _bh_steps = []
+_bh_inputs = []
+_bh_injected = []
 _BH_LIMIT = 5000
 
 def _bh_safe(value):
@@ -47,8 +49,49 @@ def _bh_safe(value):
         except Exception:
             return "<unrepresentable>"
 
+def _bh_display(value):
+    # Modules are noise in a variable panel — an import line would otherwise
+    # dump the whole module repr into every subsequent step.
+    if isinstance(value, _types.ModuleType):
+        return None
+    # Functions and classes repr with a memory address, which changes every
+    # run and tells the reader nothing. A stable label is more useful.
+    if isinstance(value, (_types.FunctionType, _types.BuiltinFunctionType, type)):
+        return "<function %s>" % getattr(value, "__name__", "anonymous")
+    return _bh_safe(value)
+
+def _bh_filter(mapping):
+    out = {}
+    for k, v in mapping.items():
+        # Module-level frames expose __name__, __builtins__ and friends, and
+        # the tracer's own _bh_ helpers would show up if they shared a scope.
+        if k.startswith("__") or k.startswith("_bh_"):
+            continue
+        # The traced program's globals contain our own input() wrapper. Compare
+        # by identity, not name, so a user who genuinely rebinds input to
+        # something of their own still sees it.
+        if any(v is injected for injected in _bh_injected):
+            continue
+        shown = _bh_display(v)
+        if shown is None:
+            continue
+        out[k] = shown
+    return out
+
 def _bh_locals(frame):
-    return {k: _bh_safe(v) for k, v in frame.f_locals.items()}
+    return _bh_filter(frame.f_locals)
+
+def _bh_stack(frame):
+    # The chain of the user's own frames, innermost first. Library frames end
+    # the walk, so a call into json or re doesn't pad the stack with noise.
+    # This is what lets the UI show "in double(), called from <module>" —
+    # without it, recursion is impossible to follow.
+    names = []
+    f = frame
+    while f is not None and f.f_code.co_filename == _BH_USER_FILE:
+        names.append(f.f_code.co_name)
+        f = f.f_back
+    return names
 
 def _bh_make_tracer(target):
     def _tracer(frame, event, arg):
@@ -57,7 +100,11 @@ def _bh_make_tracer(target):
         if len(_bh_steps) >= _BH_LIMIT:
             return None
         if event == "line":
-            _bh_steps.append({"line": frame.f_lineno, "locals": _bh_locals(frame)})
+            _bh_steps.append({
+                "line": frame.f_lineno,
+                "func": frame.f_code.co_name,
+                "locals": _bh_locals(frame),
+            })
         elif event == "exception":
             # Mark the step that threw. Without this the return event below
             # (which fires with arg=None as the exception propagates) would
@@ -77,11 +124,109 @@ def _bh_make_tracer(target):
             else:
                 _bh_steps.append({
                     "line": frame.f_lineno,
+                    "func": frame.f_code.co_name,
                     "locals": _bh_locals(frame),
                     "returned": _bh_safe(arg),
                 })
         return _tracer
     return _tracer
+
+# The playground compiles user source under this filename. Frames created by
+# that source — the module body AND any function it defines — inherit it, so
+# filtering on it traces exactly the user's own code and nothing from the
+# standard library. Filtering on co_name instead would trace only the top
+# level, and a script that calls a function would show almost nothing.
+_BH_USER_FILE = "<user>"
+
+class _BHStepLimit(BaseException):
+    pass
+
+def _bh_make_file_tracer():
+    def _tracer(frame, event, arg):
+        if frame.f_code.co_filename != _BH_USER_FILE:
+            return None
+        if len(_bh_steps) >= _BH_LIMIT:
+            raise _BHStepLimit()
+        if event == "line":
+            _bh_steps.append({
+                "line": frame.f_lineno,
+                "func": frame.f_code.co_name,
+                "stack": _bh_stack(frame),
+                "locals": _bh_locals(frame),
+            })
+        elif event == "exception":
+            if _bh_steps:
+                exc_type, exc_value = arg[0], arg[1]
+                _bh_steps[-1]["raised"] = "%s: %s" % (exc_type.__name__, exc_value)
+        return _tracer
+    return _tracer
+
+def _bh_make_input(real_input):
+    def _input(prompt=""):
+        value = real_input(prompt)
+        # len(_bh_steps) is the index of the step currently being executed —
+        # the line event fired before this call, so it is already recorded.
+        _bh_inputs.append({
+            "step": max(0, len(_bh_steps) - 1),
+            "prompt": str(prompt),
+            "value": value,
+        })
+        return value
+    return _input
+
+def _bh_trace_script(source):
+    _bh_steps.clear()
+    _bh_inputs.clear()
+    error = None
+    # A fresh globals dict per run: no state carries over between executions,
+    # and the tracer's own helpers stay out of the user's namespace.
+    user_globals = {"__name__": "__main__"}
+    # Shadows the builtin for the traced program only; a fresh globals dict per
+    # run means this never leaks into another execution.
+    import builtins as _builtins
+    _bh_injected.clear()
+    _bh_wrapped_input = _bh_make_input(_builtins.input)
+    _bh_injected.append(_bh_wrapped_input)
+    user_globals["input"] = _bh_wrapped_input
+    try:
+        compiled = compile(source, _BH_USER_FILE, "exec")
+    except SyntaxError as e:
+        # Compilation fails before anything runs, so there are no steps — but
+        # the line number is the most useful thing we can hand back.
+        return _json.dumps({
+            "steps": [],
+            "result": None,
+            "error": "SyntaxError: %s (line %s)" % (e.msg, e.lineno),
+            "truncated": False,
+        })
+
+    truncated = False
+    _sys.settrace(_bh_make_file_tracer())
+    try:
+        exec(compiled, user_globals)
+    except _BHStepLimit:
+        # Hit the cap. Not a user error — the steps so far are still valid.
+        truncated = True
+    except BaseException as e:
+        error = "%s: %s" % (type(e).__name__, e)
+    finally:
+        _sys.settrace(None)
+
+    if error is None and not truncated:
+        _bh_steps.append({
+            "line": _bh_steps[-1]["line"] if _bh_steps else 1,
+            "func": "<module>",
+            "locals": _bh_filter(user_globals),
+            "final": True,
+        })
+
+    return _json.dumps({
+        "steps": _bh_steps,
+        "inputs": _bh_inputs,
+        "result": None,
+        "error": error,
+        "truncated": truncated,
+    })
 
 def _bh_trace(fn, args, target):
     _bh_steps.clear()
@@ -172,11 +317,21 @@ self.onmessage = async (event) => {
   }
 
   if (msg.type === "trace") {
-    const { id, code, files, entryFile, functionName, input } = msg;
+    const { id, code, files, entryFile, functionName, input, mode, stdin } = msg;
     const pyodide = await getPyodide();
 
     const stdoutChunks = [];
     pyodide.setStdout({ batched: (s) => stdoutChunks.push(s) });
+
+    // input() has no keyboard to read from in a worker; without this it fails
+    // with a bare OSError. Feeding the lines the visitor supplied makes normal
+    // student code — which uses input() constantly — actually runnable.
+    //
+    // Returning undefined once the lines run out raises EOFError, which is the
+    // correct Python behaviour and stops the program. Returning null instead
+    // does NOT signal EOF and spins forever; verified against Pyodide 0.28.3.
+    const stdinQueue = typeof stdin === "string" && stdin.length > 0 ? stdin.split("\n") : [];
+    pyodide.setStdin({ stdin: () => (stdinQueue.length ? stdinQueue.shift() : undefined) });
 
     let payload = null;
     let error = null;
@@ -185,6 +340,16 @@ self.onmessage = async (event) => {
 
     try {
       globals = pyodide.toPy({});
+
+      // The visualizer traces arbitrary pasted source: there is no challenge
+      // to load and no function to call, so the whole script is executed and
+      // traced instead.
+      if (mode === "script") {
+        await pyodide.runPythonAsync(TRACER_SOURCE, { globals });
+        const traceScript = globals.get("_bh_trace_script");
+        payload = JSON.parse(traceScript(code));
+        if (typeof traceScript.destroy === "function") traceScript.destroy();
+      } else {
       await loadChallenge(pyodide, { code, files, entryFile, functionName }, globals);
       await pyodide.runPythonAsync(TRACER_SOURCE, { globals });
 
@@ -202,6 +367,7 @@ self.onmessage = async (event) => {
 
       if (typeof fn.destroy === "function") fn.destroy();
       if (typeof trace.destroy === "function") trace.destroy();
+      }
     } catch (err) {
       error = describeError(err);
     } finally {
@@ -210,12 +376,14 @@ self.onmessage = async (event) => {
       });
       if (globals && typeof globals.destroy === "function") globals.destroy();
       pyodide.setStdout({});
+      pyodide.setStdin({ stdin: () => undefined });
     }
 
     self.postMessage({
       type: "trace-result",
       id,
       steps: payload?.steps ?? [],
+      inputs: payload?.inputs ?? [],
       result: payload?.result ?? null,
       truncated: payload?.truncated ?? false,
       stdout: stdoutChunks.join(""),

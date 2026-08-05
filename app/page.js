@@ -10,7 +10,7 @@ import {
   ZapIcon,
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/auth";
-import { BUG_CATEGORIES } from "@/lib/constants";
+import { BUG_PATTERNS } from "@/lib/bug-patterns";
 import { JsonLd } from "@/components/json-ld";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, absoluteUrl } from "@/lib/site";
@@ -280,6 +280,27 @@ export default async function LandingPage() {
       </section>
 
       {/* Categories */}
+      {/* The visualizer is a standalone tool with its own reason to visit, so
+          it gets its own section rather than a footer link. */}
+      <section className="border-y border-border/60 bg-card/30">
+        <div className="mx-auto w-full max-w-5xl px-4 py-16 sm:py-24">
+          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+            Stuck on your own code?
+          </h2>
+          <p className="mt-3 max-w-xl text-muted-foreground">
+            Paste it into the visualizer and watch it run, one line at a time, with every variable
+            at every step. Seeing the exact moment a value goes wrong is usually faster than
+            reading the code again.
+          </p>
+          <div className="mt-6">
+            <Button size="lg" nativeButton={false} render={<Link href="/visualize">Open the visualizer</Link>} />
+          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Free, no account, nothing to install — it runs in your browser.
+          </p>
+        </div>
+      </section>
+
       <section id="categories" className="mx-auto w-full max-w-5xl px-4 py-16 sm:py-24">
         <h2 className="text-center text-2xl font-semibold tracking-tight sm:text-3xl">
           The bugs you will actually hit
@@ -288,15 +309,16 @@ export default async function LandingPage() {
           Sorted by the pattern behind them, so you can drill the ones that keep catching you out.
         </p>
         <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {BUG_CATEGORIES.map((category) => (
+          {BUG_PATTERNS.map((pattern) => (
             <Link
-              key={category.value}
-              href={`/challenges?bug_category=${category.value}`}
+              key={pattern.slug}
+              href={`/bugs/${pattern.slug}`}
               className="group rounded-xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:ring-primary/30"
             >
               <p className="font-medium transition-colors group-hover:text-primary">
-                {category.label}
+                {pattern.title}
               </p>
+              <p className="mt-1 font-mono text-xs text-muted-foreground">{pattern.errors[0]}</p>
             </Link>
           ))}
         </div>

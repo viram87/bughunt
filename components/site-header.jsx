@@ -52,6 +52,22 @@ export function SiteHeader({ user, profile }) {
                 variant="ghost"
                 size="sm"
                 nativeButton={false}
+                render={<Link href="/visualize">Visualizer</Link>}
+              />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/bugs">Bug patterns</Link>}
+              />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
                 render={<Link href="/dashboard">Dashboard</Link>}
               />
             </span>
@@ -113,6 +129,22 @@ export function SiteHeader({ user, profile }) {
               nativeButton={false}
               render={<Link href="/challenges">Challenges</Link>}
             />
+            <span className="hidden sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/visualize">Visualizer</Link>}
+              />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <Button
+                variant="ghost"
+                size="sm"
+                nativeButton={false}
+                render={<Link href="/bugs">Bug patterns</Link>}
+              />
+            </span>
             <span className="hidden sm:inline-flex">
               <ThemeToggle />
             </span>

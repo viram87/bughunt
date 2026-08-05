@@ -10,6 +10,9 @@ export default async function sitemap() {
   const staticRoutes = [
     { url: absoluteUrl("/"), changeFrequency: "daily", priority: 1 },
     { url: absoluteUrl("/challenges"), changeFrequency: "daily", priority: 0.9 },
+    // A standalone tool with its own search intent ("python visualizer"),
+    // so it ranks alongside the main sections rather than below them.
+    { url: absoluteUrl("/visualize"), changeFrequency: "monthly", priority: 0.9 },
     { url: absoluteUrl("/bugs"), changeFrequency: "weekly", priority: 0.9 },
     // The landing pages are the main organic entry points, so they rank
     // alongside /challenges rather than below the legal pages.

@@ -394,7 +394,7 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
         <div className="mt-8 rounded-xl border border-dashed p-4">
           <p className="text-sm font-medium">This is {pattern.article} {pattern.title.toLowerCase()} bug</p>
           <p className="mt-1 text-sm text-muted-foreground">{pattern.blurb}</p>
-          <div className="mt-3">
+          <div className="mt-3 flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -404,6 +404,12 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
                   Learn the {pattern.title.toLowerCase()} pattern
                 </Link>
               }
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/visualize">Step through your own code</Link>}
             />
           </div>
         </div>
