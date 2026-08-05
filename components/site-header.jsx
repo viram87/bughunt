@@ -30,7 +30,11 @@ export function SiteHeader({ user, profile }) {
         {/* The wordmark must be a single flex item — as bare text nodes,
             "Bug" and "Hunt" each became flex children and gap-2 pushed a
             space between them. */}
-        <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+        <Link
+          href="/"
+          aria-label="BugHunt"
+          className="flex items-center gap-2 text-lg font-semibold tracking-tight"
+        >
           <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BugIcon className="size-4" />
           </span>

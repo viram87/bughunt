@@ -18,7 +18,11 @@ export function SiteFooter({ user }) {
             {/* The wordmark is one flex item, not two: as bare text nodes,
                 "Bug" and "Hunt" each became flex children and gap-2 pushed
                 them apart. */}
-            <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
+            <Link
+              href="/"
+              aria-label="BugHunt"
+              className="flex items-center gap-2 font-semibold tracking-tight"
+            >
               <span className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
                 <BugIcon className="size-3.5" />
               </span>
