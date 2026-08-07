@@ -114,5 +114,6 @@ one batch.
 - **Restart the dev server if the styling looks broken.** Turbopack's incremental CSS rebuild occasionally drops utility classes (`.grid`, `.h-3`) from the dev bundle. Production builds are unaffected.
 - `/api/health` is a keep-alive endpoint; Supabase's free tier pauses after 7 days of inactivity, so an external cron pings it every few days. It runs a real query so the *database* is touched, not just the server.
 - The code editor is desktop-oriented by design. Browsing and reading are mobile-friendly; debugging on a phone is not the target experience.
-# bughunt
-# bughunt
+
+For a deeper guide — constraints, challenge-authoring workflow, and the
+gotchas that have already cost hours — see `docs/PROJECT-GUIDE.md`.

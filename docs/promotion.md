@@ -13,7 +13,7 @@ number invites a comparison with HackerRank that is not worth inviting.
 ## LinkedIn — Featured section
 
 Profile → Add profile section → Recommended → Add featured → Add a link →
-paste `https://trybughunt.vercel.app`
+paste `https://trybughunt.com`
 
 LinkedIn auto-fills the title and image from the site's Open Graph tags, then
 lets you edit both the title and the description. **Overwrite them.** The
@@ -110,7 +110,7 @@ Practical details:
   admin rights.
 - Python and JavaScript, across easy to hard.
 
-https://trybughunt.vercel.app
+https://trybughunt.com
 
 Happy to add challenges for a specific topic you teach if that would
 help.
@@ -145,24 +145,32 @@ error strings people actually search (`IndexError: string index out of range`,
 symptom rather than the spec, internal linking from every challenge to its
 pattern, and structured data.
 
-**Still required, and it is the bottleneck:** submit the sitemap in Google
-Search Console (Sitemaps → `sitemap.xml` → Submit), then use URL Inspection →
-Request indexing on `/bugs` and two or three pattern pages. Nothing gets indexed
-until Google is told to crawl.
+Sitemap submitted. After the move to trybughunt.com, add the new domain as a
+**separate Search Console property** — the old one only covers the vercel.app
+host — verify it via Cloudflare DNS, and resubmit the sitemap there. Then use
+URL Inspection → Request indexing on `/`, `/visualize` and two or three pattern
+pages.
 
-Realistic timeline: three to six months before meaningful traffic. It is slow,
+Realistic timeline: three to six months before meaningful traffic, and a new
+domain starts from zero authority, so expect a dip before it climbs. It is slow,
 but it works while you sleep, which none of the other channels do.
 
 ---
 
 ## Outstanding operational items
 
-- Submit sitemap + request indexing in Search Console — **the bottleneck**
-- Run `supabase/migrations/0006_challenge_reports.sql` so reporting works
+Done: custom domain (trybughunt.com, Cloudflare Registrar), OAuth consent screen
+published to production, sitemap submitted for the old host.
+
+- Add **trybughunt.com as a new Search Console property** and resubmit the
+  sitemap there. The existing property only covers the vercel.app host.
+- Run `supabase/migrations/0006_challenge_reports.sql` so the report button works
 - Enable Web Analytics in the Vercel dashboard (the component alone does not
   switch it on)
-- Buy a custom domain. It gates three separate things: publishing the Google
-  OAuth consent screen (a `*.vercel.app` subdomain can never be verified in
-  Search Console, so Google sign-in stays limited to test users), Search Console
-  ownership, and Google labelling the site "Vercel". Flip
-  `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` once the consent screen is published.
+- Set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true` in Vercel now that the consent
+  screen is in production, and confirm Supabase's Site URL and Redirect URLs
+  point at the new domain.
+
+Google branding verification may stay pending. It only affects how the consent
+screen looks — publishing status is what governs who can sign in, and that is
+already In production.

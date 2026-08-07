@@ -20,7 +20,7 @@ function ident(name) {
   return { type: "Identifier", name };
 }
 
-function captureCall(line, names) {
+function captureCall(line, names, funcName, isFinal) {
   return {
     type: "ExpressionStatement",
     expression: {
@@ -41,6 +41,8 @@ function captureCall(line, names) {
             value: ident(n),
           })),
         },
+        { type: "Literal", value: funcName ?? "<script>" },
+        { type: "Literal", value: Boolean(isFinal) },
       ],
     },
   };
@@ -81,18 +83,18 @@ function instrument(code, targetName) {
     }
   }
 
-  function walkBlock(block, declared) {
+  function walkBlock(block, declared, funcName) {
     const out = [];
     for (const stmt of block.body) {
-      out.push(captureCall(stmt.loc.start.line, [...declared]));
+      out.push(captureCall(stmt.loc.start.line, [...declared], funcName));
       declaredFrom(stmt, declared);
-      walkInto(stmt, declared);
+      walkInto(stmt, declared, funcName);
       out.push(stmt);
     }
     block.body = out;
   }
 
-  function walkInto(stmt, declared) {
+  function walkInto(stmt, declared, funcName) {
     // Nested blocks always get a COPY: loop-header bindings and block-scoped
     // declarations must not leak outward, or a capture after the block would
     // reference an out-of-scope name and throw.
@@ -127,12 +129,155 @@ function instrument(code, targetName) {
     }
 
     for (const body of bodies) {
-      if (body?.type === "BlockStatement") walkBlock(body, [...inner]);
+      if (body?.type === "BlockStatement") walkBlock(body, [...inner], funcName);
+    }
+
+    // Descend into the user's own functions so a script that does its work
+    // inside a function still produces a useful trace. Each gets its own name
+    // and its parameters in scope.
+    for (const fn of functionsIn(stmt)) {
+      if (fn.node.body?.type !== "BlockStatement") continue;
+      const params = fn.node.params.filter((p) => p.type === "Identifier").map((p) => p.name);
+      walkBlock(fn.node.body, [...declared, ...params], fn.name);
     }
   }
 
+  // Function declarations, and functions assigned to a variable — the two
+  // shapes that carry a name worth showing in the trace.
+  function functionsIn(stmt) {
+    const found = [];
+    if (stmt.type === "FunctionDeclaration" && stmt.id?.name) {
+      found.push({ name: stmt.id.name, node: stmt });
+    }
+    if (stmt.type === "VariableDeclaration") {
+      for (const d of stmt.declarations) {
+        const init = d.init;
+        if (
+          d.id?.type === "Identifier" &&
+          (init?.type === "FunctionExpression" || init?.type === "ArrowFunctionExpression")
+        ) {
+          found.push({ name: d.id.name, node: init });
+        }
+      }
+    }
+    return found;
+  }
+
   const params = target.params.filter((p) => p.type === "Identifier").map((p) => p.name);
-  walkBlock(target.body, [...params]);
+  walkBlock(target.body, [...params], targetName);
+
+  return generate(ast);
+}
+
+/**
+ * Instruments a WHOLE PROGRAM rather than one named function — the visualizer's
+ * entry point, where the reader pastes arbitrary code with no function to call.
+ *
+ * A Program node exposes `body` as a statement array exactly like a
+ * BlockStatement, so the same walker applies. Top-level `declared` starts
+ * empty: nothing is in scope before the first statement runs.
+ */
+function instrumentProgram(code) {
+  const ast = acorn.parse(code, { ecmaVersion: 2022, locations: true });
+
+  function declaredFrom(node, into) {
+    // Function declarations are bindings too; without them a declared function
+    // never shows up in the variable panel.
+    if (node?.type === "FunctionDeclaration" && node.id?.name) {
+      into.push(node.id.name);
+      return;
+    }
+    if (node?.type !== "VariableDeclaration") return;
+    for (const d of node.declarations) {
+      if (d.id.type === "Identifier") into.push(d.id.name);
+    }
+  }
+
+  function functionsIn(stmt) {
+    const found = [];
+    if (stmt.type === "FunctionDeclaration" && stmt.id?.name) {
+      found.push({ name: stmt.id.name, node: stmt });
+    }
+    if (stmt.type === "VariableDeclaration") {
+      for (const d of stmt.declarations) {
+        const init = d.init;
+        if (
+          d.id?.type === "Identifier" &&
+          (init?.type === "FunctionExpression" || init?.type === "ArrowFunctionExpression")
+        ) {
+          found.push({ name: d.id.name, node: init });
+        }
+      }
+    }
+    return found;
+  }
+
+  function walkBlock(block, declared, funcName) {
+    const out = [];
+    for (const stmt of block.body) {
+      out.push(captureCall(stmt.loc.start.line, [...declared], funcName));
+      declaredFrom(stmt, declared);
+      walkInto(stmt, declared, funcName);
+      out.push(stmt);
+    }
+    block.body = out;
+  }
+
+  function walkInto(stmt, declared, funcName) {
+    const bodies = [];
+    const inner = [...declared];
+
+    switch (stmt.type) {
+      case "ForOfStatement":
+      case "ForInStatement":
+        declaredFrom(stmt.left, inner);
+        bodies.push(stmt.body);
+        break;
+      case "ForStatement":
+        declaredFrom(stmt.init, inner);
+        bodies.push(stmt.body);
+        break;
+      case "WhileStatement":
+      case "DoWhileStatement":
+        bodies.push(stmt.body);
+        break;
+      case "IfStatement":
+        bodies.push(stmt.consequent, stmt.alternate);
+        break;
+      case "TryStatement":
+        bodies.push(stmt.block, stmt.handler?.body, stmt.finalizer);
+        break;
+      case "BlockStatement":
+        bodies.push(stmt);
+        break;
+      default:
+        break;
+    }
+
+    for (const body of bodies) {
+      if (body?.type === "BlockStatement") walkBlock(body, [...inner], funcName);
+    }
+
+    for (const fn of functionsIn(stmt)) {
+      if (fn.node.body?.type !== "BlockStatement") continue;
+      const params = fn.node.params.filter((p) => p.type === "Identifier").map((p) => p.name);
+      walkBlock(fn.node.body, [...declared, ...params], fn.name);
+    }
+  }
+
+  // Top-level names, collected before instrumenting so the closing capture can
+  // report the finished state of all of them.
+  const topLevel = [];
+  for (const stmt of ast.body) declaredFrom(stmt, topLevel);
+
+  walkBlock(ast, [], "<script>");
+
+  // A capture fires BEFORE its statement, so without this the last line's
+  // effect is invisible — paste `const answer = compute()` as the final line
+  // and `answer` would never appear anywhere. Mirrors the Python tracer's
+  // "after the last line" step.
+  const lastLine = code.split("\n").length;
+  ast.body.push(captureCall(lastLine, topLevel, "<script>", true));
 
   return generate(ast);
 }
@@ -156,13 +301,39 @@ self.onmessage = async (event) => {
   const msg = event.data;
   if (msg.type !== "trace") return;
 
-  const { id, code, functionName, input } = msg;
+  const { id, code, functionName, input, mode } = msg;
   const steps = [];
+  const stdoutChunks = [];
   let result = null;
   let error = null;
   let truncated = false;
 
-  const record = (line, vars) => {
+  // console.* is the only output channel a pasted script has, so it is
+  // captured rather than lost. Restored in `finally` — a worker is reused
+  // across messages and a leaked patch would swallow later output.
+  const realConsole = { log: console.log, warn: console.warn, error: console.error };
+  const captureConsole = () => {
+    const write = (...args) => {
+      stdoutChunks.push(
+        args
+          .map((a) => {
+            if (typeof a === "string") return a;
+            try {
+              return JSON.stringify(a);
+            } catch {
+              return String(a);
+            }
+          })
+          .join(" ")
+      );
+    };
+    console.log = write;
+    console.warn = write;
+    console.error = write;
+  };
+  const restoreConsole = () => Object.assign(console, realConsole);
+
+  const record = (line, vars, funcName, isFinal) => {
     if (steps.length >= STEP_LIMIT) {
       // Throw rather than silently stop recording. Merely stopping leaves an
       // infinite loop spinning until the outer timeout — burning ~10s to
@@ -172,9 +343,47 @@ self.onmessage = async (event) => {
       throw new Error(STEP_LIMIT_SIGNAL);
     }
     const locals = {};
-    for (const [k, v] of Object.entries(vars)) locals[k] = safeClone(v);
-    steps.push({ line, locals });
+    for (const [k, v] of Object.entries(vars)) {
+      // Functions repr with source text, which is noise in a variable panel;
+      // a stable label matches what the Python tracer shows.
+      locals[k] = typeof v === "function" ? `<function ${v.name || "anonymous"}>` : safeClone(v);
+    }
+    const step = { line, func: funcName ?? "<script>", locals };
+    if (isFinal) step.final = true;
+    steps.push(step);
   };
+
+  // The visualizer traces arbitrary pasted source: there is no function to
+  // call, so the whole program is instrumented and executed.
+  if (mode === "script") {
+    try {
+      captureConsole();
+      const instrumented = instrumentProgram(code);
+      new Function("__bh", instrumented)(record);
+    } catch (err) {
+      const message = err?.message ?? String(err);
+      if (message === STEP_LIMIT_SIGNAL) {
+        truncated = true;
+      } else {
+        error = message;
+        if (steps.length > 0) steps[steps.length - 1].raised = error;
+      }
+    } finally {
+      restoreConsole();
+    }
+
+    self.postMessage({
+      type: "trace-result",
+      id,
+      steps,
+      inputs: [],
+      result: null,
+      error,
+      truncated,
+      stdout: stdoutChunks.join("\n"),
+    });
+    return;
+  }
 
   try {
     const instrumented = instrument(code, functionName);

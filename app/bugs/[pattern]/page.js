@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { BUG_PATTERNS, PATTERN_BY_SLUG } from "@/lib/bug-patterns";
+import { ERROR_PAGES } from "@/lib/error-pages";
 import { LANGUAGES } from "@/lib/constants";
 import { ChallengeCard } from "@/components/challenge-card";
 import { JsonLd } from "@/components/json-ld";
@@ -57,6 +58,9 @@ export default async function BugPatternPage({ params }) {
     .order("id", { ascending: false });
 
   const list = challenges ?? [];
+  // Dedicated pages for the errors this pattern produces. Linking them gives
+  // each error page an internal link from a topically related parent.
+  const errorPages = ERROR_PAGES.filter((e) => e.pattern === slug);
   const byLanguage = LANGUAGES.map((l) => ({
     ...l,
     count: list.filter((c) => c.language === l.value).length,
@@ -147,14 +151,25 @@ export default async function BugPatternPage({ params }) {
             Errors and symptoms this causes
           </h2>
           <ul className="flex flex-wrap gap-2">
-            {pattern.errors.map((err) => (
-              <li
-                key={err}
-                className="rounded-md bg-muted px-2 py-1 font-mono text-xs text-foreground"
-              >
-                {err}
-              </li>
-            ))}
+            {pattern.errors.map((err) => {
+              const page = errorPages.find((e) => e.error === err);
+              return (
+                <li key={err}>
+                  {page ? (
+                    <Link
+                      href={`/errors/${page.slug}`}
+                      className="inline-block rounded-md bg-muted px-2 py-1 font-mono text-xs text-foreground hover:text-primary"
+                    >
+                      {err}
+                    </Link>
+                  ) : (
+                    <span className="inline-block rounded-md bg-muted px-2 py-1 font-mono text-xs text-foreground">
+                      {err}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
 

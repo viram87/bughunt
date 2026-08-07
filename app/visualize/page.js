@@ -4,23 +4,26 @@ import { JsonLd } from "@/components/json-ld";
 import { absoluteUrl, SITE_NAME, SITE_URL } from "@/lib/site";
 
 export const metadata = {
-  title: "Python visualizer — step through your code line by line",
+  title: "Python & JavaScript visualizer — step through your code line by line",
   description:
-    "Paste Python and watch it run, one line at a time, with every variable at every step. Free, no account, no install — it runs in your browser.",
+    "Paste Python or JavaScript and watch it run, one line at a time, with every variable at every step. Free, no account, no install — it runs in your browser.",
   keywords: [
     "python visualizer",
+    "javascript visualizer",
     "visualize python code",
+    "step through javascript code online",
     "step through python code online",
-    "python code execution visualizer",
+    "javascript code execution visualizer",
     "online python debugger",
+    "online javascript debugger",
   ],
   alternates: { canonical: absoluteUrl("/visualize") },
   openGraph: {
     type: "website",
     url: absoluteUrl("/visualize"),
-    title: "Python visualizer — step through your code line by line",
+    title: "Python & JavaScript visualizer — step through your code line by line",
     description:
-      "Paste Python and watch it run, one line at a time, with every variable at every step. Free and instant.",
+      "Paste Python or JavaScript and watch it run, one line at a time, with every variable at every step. Free and instant.",
     siteName: SITE_NAME,
   },
 };
@@ -29,12 +32,12 @@ export default function VisualizePage() {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: `${SITE_NAME} Python Visualizer`,
+    name: `${SITE_NAME} Code Visualizer`,
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Any (runs in the browser)",
     url: absoluteUrl("/visualize"),
     description:
-      "Step through Python code line by line and see every variable at every step. Runs entirely in the browser.",
+      "Step through Python or JavaScript code line by line and see every variable at every step. Runs entirely in the browser.",
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
     provider: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
   };
@@ -61,6 +64,14 @@ export default function VisualizePage() {
         acceptedAnswer: {
           "@type": "Answer",
           text: "Yes. This visualizer is free with no sign-up. Python runs inside your own browser tab rather than on a server, so your code is never uploaded and there is no queue or usage limit.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Can I visualize JavaScript code too?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. Both Python and JavaScript are supported. JavaScript has no equivalent of Python's sys.settrace, so the source is parsed and a recording call is injected before every statement. Both languages trace into your own functions.",
         },
       },
       {
@@ -95,9 +106,10 @@ export default function VisualizePage() {
       <JsonLd data={jsonLd} />
       <JsonLd data={faq} />
 
-      <h1 className="text-3xl font-semibold tracking-tight">Python visualizer</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Python &amp; JavaScript visualizer</h1>
       <p className="mt-2 max-w-2xl text-muted-foreground">
-        Paste your code and watch it run, one line at a time, with every variable at every step.
+        Paste Python or JavaScript and watch it run, one line at a time, with every variable at every
+        step.
         Seeing the exact moment a value goes wrong is usually faster than reading the code again.
       </p>
 
@@ -108,14 +120,16 @@ export default function VisualizePage() {
       <section className="mt-14 max-w-2xl space-y-4 text-sm leading-relaxed text-muted-foreground">
         <h2 className="text-lg font-semibold text-foreground">How it works</h2>
         <p>
-          Python runs through WebAssembly inside your own browser tab — there is no server, so your
-          code is never uploaded and there is nothing to install or sign up for. The first run
-          downloads the Python runtime; after that it is instant.
+          Python runs through WebAssembly inside your own browser tab and JavaScript runs in a
+          sandboxed worker — there is no server, so your code is never uploaded and there is nothing
+          to install or sign up for. The first Python run downloads the runtime; after that it is
+          instant.
         </p>
         <p>
-          Execution is traced with <code>sys.settrace</code>, which records every line as it runs
-          along with the variables in scope. Your own functions are traced too; library internals
-          are filtered out so the trace stays readable.
+          Python is traced with <code>sys.settrace</code>, which records every line as it runs along
+          with the variables in scope. JavaScript has no equivalent, so the source is parsed and a
+          recording call is injected before every statement. Both trace into your own functions;
+          library internals are filtered out so the trace stays readable.
         </p>
 
         <h2 className="pt-2 text-lg font-semibold text-foreground">Why step through code?</h2>
@@ -135,6 +149,15 @@ export default function VisualizePage() {
             practise finding them
           </Link>
           .
+        </p>
+
+        <h2 className="pt-2 text-lg font-semibold text-foreground">
+          Can I visualize JavaScript code too?
+        </h2>
+        <p>
+          Yes — switch the language above the editor. Both languages step line by line and trace
+          into your own functions, and <code>console.log</code> output is captured the same way
+          Python&rsquo;s <code>print</code> is.
         </p>
 
         <h2 className="pt-2 text-lg font-semibold text-foreground">Does it work with input()?</h2>
@@ -164,7 +187,8 @@ export default function VisualizePage() {
         <h2 className="pt-2 text-lg font-semibold text-foreground">Limits</h2>
         <p>
           Tracing stops after 5,000 steps, which is generous for normal code and stops an infinite
-          loop from hanging the tab. JavaScript is not supported yet.
+          loop from hanging the tab. <code>input()</code> is Python-only — JavaScript has no
+          blocking input primitive to supply values to.
         </p>
       </section>
     </main>

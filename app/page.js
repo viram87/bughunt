@@ -108,6 +108,30 @@ const FAQS = [
     a: "Each challenge has three hints that unlock in order: a nudge, then the region of code, then nearly the answer. They are optional, and your dashboard tracks how many you used so you can watch that number fall over time.",
   },
   {
+    q: "How do I get better at debugging?",
+    a: "By debugging, repeatedly, and being told what you just found. Reading about bugs teaches you the vocabulary; finding them teaches you the reflex. Each challenge here ends with the pattern behind the bug, so the next off-by-one or closure bug takes minutes instead of an afternoon.",
+  },
+  {
+    q: "Where can I practice debugging code online?",
+    a: "Here, free and in the browser. Most coding practice sites give you a blank file and an algorithm to implement. This gives you working code with one bug in it and the symptom rather than the cause, which is much closer to real work.",
+  },
+  {
+    q: "How is this different from LeetCode or HackerRank?",
+    a: "Those grade you on writing code from scratch, mostly for interview algorithm rounds. This grades you on fixing code someone else wrote, which is what most engineering time actually goes on. They are complementary, not competing.",
+  },
+  {
+    q: "Is it good for beginners?",
+    a: "Yes. Challenges run from easy to hard and each one is a single, self-contained bug with an explanation afterwards. A step-through visualizer lets you watch the code run line by line, which is often the fastest way to understand why a value is wrong.",
+  },
+  {
+    q: "Can I use it for interview preparation?",
+    a: "It helps with the parts of an interview that are not algorithm puzzles — debugging exercises, pair-programming rounds, and any question about how you would find a fault. Recognising bug patterns on sight is the transferable skill.",
+  },
+  {
+    q: "Can teachers use this in a programming lab?",
+    a: "Yes, and it is free with no licence. Nothing needs installing, students do not need accounts to start, and it works on a locked-down lab machine because everything runs in the browser tab.",
+  },
+  {
     q: "What happens to my code?",
     a: "It stays in your browser. Execution happens locally in a sandboxed worker, and we only store your submission if you are signed in and want your progress tracked.",
   },
@@ -122,15 +146,38 @@ export default async function LandingPage() {
     redirect("/challenges");
   }
 
+  // alternateName is the documented way to tell Google the other spellings of
+  // a brand. Nothing on the site ever writes "Bug Hunt" with a space, and the
+  // domain tokenises as one word — so a search for "try bug hunt" had no signal
+  // connecting it here. These are real variants a person would actually type,
+  // not keyword stuffing.
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: SITE_NAME,
+    alternateName: ["Bug Hunt", "TryBugHunt", "Try BugHunt"],
     url: SITE_URL,
     description: SITE_DESCRIPTION,
     inLanguage: "en",
     isAccessibleForFree: true,
     audience: { "@type": "EducationalAudience", educationalRole: "student" },
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      alternateName: ["Bug Hunt", "TryBugHunt"],
+      url: SITE_URL,
+      logo: absoluteUrl("/icon.svg"),
+    },
+    potentialAction: {
+      // Tells Google the site has its own search, which can earn a sitelinks
+      // search box on brand queries — exactly the query type that is failing.
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/challenges?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
   };
 
   const faqJsonLd = {
@@ -151,6 +198,7 @@ export default async function LandingPage() {
       {/* Hero */}
       <section className="border-b border-border/60 bg-gradient-to-b from-accent/40 to-transparent">
         <div className="mx-auto w-full max-w-3xl px-4 py-20 text-center sm:py-28">
+          <p className="mb-3 text-sm font-semibold tracking-wide text-primary">BugHunt</p>
           <p className="mb-5 inline-flex items-center rounded-full border border-border/70 bg-card/60 px-3 py-1 text-xs font-medium text-muted-foreground">
             Free debugging practice · Python &amp; JavaScript
           </p>

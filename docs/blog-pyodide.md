@@ -5,7 +5,7 @@ description: "I run Python client-side with Pyodide — no backend executes any 
 tags: python, webassembly, javascript, webdev
 # cover_image only works in dev.to's markdown editor. In the default
 # editor use "Add a cover image" and upload docs/cover-pyodide.png instead.
-cover_image: https://trybughunt.vercel.app/blog-cover/pyodide
+cover_image: https://trybughunt.com/blog-cover/pyodide
 ---
 
 I built a debugging-practice site where student code runs **entirely in the
@@ -125,5 +125,5 @@ suite.
 
 ---
 
-*Built for [BugHunt](https://trybughunt.vercel.app) — free debugging practice,
+*Built for [BugHunt](https://trybughunt.com) — free debugging practice,
 runs in your browser, no account needed.*

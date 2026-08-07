@@ -5,7 +5,7 @@ description: "Courses grade you on writing code. Almost none grade you on fixing
 tags: beginners, learning, python, javascript
 # cover_image only works in dev.to's markdown editor. In the default
 # editor use "Add a cover image" and upload docs/cover-debugging.png instead.
-cover_image: https://trybughunt.vercel.app/blog-cover/debugging
+cover_image: https://trybughunt.com/blog-cover/debugging
 ---
 
 You've been here.
@@ -54,7 +54,7 @@ being told what you just found.
 
 ## So I built the practice
 
-[BugHunt](https://trybughunt.vercel.app) gives you working code with exactly one
+[BugHunt](https://trybughunt.com) gives you working code with exactly one
 bug in it.
 
 You get the **symptom**, not the cause:
@@ -95,7 +95,7 @@ nothing to recoup, so there's no reason to start charging.
 
 Pick a bug and see how long it takes you:
 
-**[trybughunt.vercel.app](https://trybughunt.vercel.app)**
+**[trybughunt.com](https://trybughunt.com)**
 
 If an explanation is confusing, there's a report button on every challenge. I
 read them.

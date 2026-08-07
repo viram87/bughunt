@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { absoluteUrl } from "@/lib/site";
 import { BUG_PATTERNS } from "@/lib/bug-patterns";
+import { ERROR_PAGES } from "@/lib/error-pages";
 
 // Regenerate hourly rather than per-request: challenges change rarely, and
 // this keeps crawler traffic from hitting the database every time.
@@ -13,6 +14,12 @@ export default async function sitemap() {
     // A standalone tool with its own search intent ("python visualizer"),
     // so it ranks alongside the main sections rather than below them.
     { url: absoluteUrl("/visualize"), changeFrequency: "monthly", priority: 0.9 },
+    { url: absoluteUrl("/errors"), changeFrequency: "weekly", priority: 0.9 },
+    ...ERROR_PAGES.map((e) => ({
+      url: absoluteUrl(`/errors/${e.slug}`),
+      changeFrequency: "monthly",
+      priority: 0.85,
+    })),
     { url: absoluteUrl("/bugs"), changeFrequency: "weekly", priority: 0.9 },
     // The landing pages are the main organic entry points, so they rank
     // alongside /challenges rather than below the legal pages.

@@ -85,6 +85,11 @@ export function SiteFooter({ user }) {
                 </li>
               ))}
               <li>
+                <Link href="/errors" className="hover:text-foreground">
+                  Common errors
+                </Link>
+              </li>
+              <li>
                 <Link href="/bugs" className="hover:text-foreground">
                   All bug patterns
                 </Link>

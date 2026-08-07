@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 
 const Editor = dynamic(() => import("@monaco-editor/react").then((m) => m.Editor), { ssr: false });
 
-const SAMPLE = `# Paste your own code, or step through this one.
+const SAMPLES = {
+  python: `# Paste your own code, or step through this one.
 def running_total(numbers):
     total = 0
     for n in numbers:
@@ -26,7 +27,21 @@ def running_total(numbers):
 values = [3, 1, 4]
 answer = running_total(values)
 print("answer is", answer)
-`;
+`,
+  javascript: `// Paste your own code, or step through this one.
+function runningTotal(numbers) {
+    let total = 0;
+    for (const n of numbers) {
+        total = total + n;
+    }
+    return total;
+}
+
+const values = [3, 1, 4];
+const answer = runningTotal(values);
+console.log("answer is", answer);
+`,
+};
 
 /**
  * Step through Python line by line, with every variable at every step.
@@ -41,7 +56,8 @@ print("answer is", answer)
  * says explicitly which moment it is describing.
  */
 export function Visualizer() {
-  const [code, setCode] = useState(SAMPLE);
+  const [language, setLanguage] = useState("python");
+  const [code, setCode] = useState(SAMPLES.python);
   const [stdin, setStdin] = useState("");
   const [steps, setSteps] = useState(null);
   const [inputs, setInputs] = useState([]);
@@ -71,7 +87,7 @@ export function Visualizer() {
     setStdout("");
     setTruncated(false);
 
-    const result = await traceScript({ language: "python", code, stdin });
+    const result = await traceScript({ language, code, stdin });
 
     if (!result.supported) {
       setError("This language isn't supported yet.");
@@ -85,7 +101,7 @@ export function Visualizer() {
     setTruncated(Boolean(result.truncated));
     setError(result.timedOut ? "Timed out — the code ran too long." : result.error ?? null);
     setIndex(0);
-    setRanWith({ code, stdin });
+    setRanWith({ code, stdin, language });
     setStatus("idle");
   }
 
@@ -120,7 +136,7 @@ export function Visualizer() {
 
   const stack = current?.stack ?? [];
   const stale =
-    Boolean(steps) && ranWith !== null && (ranWith.code !== code || ranWith.stdin !== stdin);
+    Boolean(steps) && ranWith !== null && (ranWith.code !== code || ranWith.stdin !== stdin || ranWith.language !== language);
 
   // The input() call that happened on this exact step, if any. Showing it here
   // rather than only in the box above is what makes the read visible at the
@@ -132,11 +148,39 @@ export function Visualizer() {
 
   // Shown only when the code actually reads from input(), so it isn't an
   // unexplained empty box for the majority of scripts that don't.
-  const needsStdin = /(^|[^.\w])input\s*\(/.test(code);
+  const needsStdin = language === "python" && /(^|[^.\w])input\s*\(/.test(code);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
+        <div className="flex rounded-lg border p-0.5">
+          {[
+            { key: "python", label: "Python" },
+            { key: "javascript", label: "JavaScript" },
+          ].map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => {
+                if (option.key === language) return;
+                setLanguage(option.key);
+                // Only replace the editor contents if the sample is untouched;
+                // switching language must never discard someone's own code.
+                if (code.trim() === SAMPLES[language].trim()) setCode(SAMPLES[option.key]);
+                setSteps(null);
+                setIndex(0);
+                setError(null);
+              }}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                language === option.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
         <Button onClick={run} disabled={status !== "idle"} size="lg">
           <PlayIcon /> {status === "running" ? "Running…" : "Visualize execution"}
         </Button>
@@ -180,7 +224,9 @@ export function Visualizer() {
 
       {status === "running" && !steps && (
         <p className="text-sm text-muted-foreground">
-          Starting Python… the first run downloads the runtime, then it&rsquo;s instant.
+          {language === "python"
+            ? "Starting Python… the first run downloads the runtime, then it’s instant."
+            : "Running…"}
         </p>
       )}
 
@@ -227,7 +273,7 @@ export function Visualizer() {
           ) : (
             <Editor
               height="420px"
-              language="python"
+              language={language}
               value={code}
               onChange={(v) => setCode(v ?? "")}
               theme="vs-dark"
