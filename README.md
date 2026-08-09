@@ -42,6 +42,15 @@ Set these in `.env.local` (never committed):
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | same page, "anon public" |
 | `SUPABASE_SERVICE_ROLE_KEY` | same page, "service_role" — not currently used by any code path |
 
+Optional report notifications:
+
+| Variable | Purpose |
+|---|---|
+| `GMAIL_SMTP_USER` | Gmail address used to send challenge report alerts |
+| `GMAIL_APP_PASSWORD` | 16-character Google App Password for that Gmail account, not the normal account password |
+| `REPORT_EMAIL_TO` | Recipient for report alerts; defaults to the contact email if omitted |
+| `REPORT_EMAIL_FROM` | Optional sender label; defaults to `BugHunt <GMAIL_SMTP_USER>` |
+
 ### Database setup
 
 Run the migrations in order in the Supabase SQL Editor:

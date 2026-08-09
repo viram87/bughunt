@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { REPORT_REASON_VALUES } from "@/lib/constants";
+import { sendChallengeReportNotification } from "@/lib/report-email";
+
+export const runtime = "nodejs";
 
 // Reporting is open to anonymous readers on purpose — requiring an account
 // would filter out the first-time visitor whose confusion is the most useful
@@ -29,16 +32,39 @@ export async function POST(request) {
 
   const { user } = await getCurrentUser();
   const supabase = await createClient();
+  const cleanDetails = details?.trim() || null;
 
-  const { error } = await supabase.from("challenge_reports").insert({
-    bug_challenge_id,
-    user_id: user?.id ?? null,
-    reason,
-    details: details?.trim() || null,
-  });
+  const [{ data: challenge }, { error }] = await Promise.all([
+    supabase
+      .from("bug_challenges")
+      .select("title")
+      .eq("id", bug_challenge_id)
+      .maybeSingle(),
+    supabase.from("challenge_reports").insert({
+      bug_challenge_id,
+      user_id: user?.id ?? null,
+      reason,
+      details: cleanDetails,
+    }),
+  ]);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Reports must still be saved even if email is not configured or SMTP has
+  // a temporary problem. The admin page remains the source of truth.
+  const notification = await sendChallengeReportNotification({
+    challenge,
+    report: {
+      bug_challenge_id,
+      reason,
+      details: cleanDetails,
+    },
+    reporter: user,
+  });
+  if (!notification.sent) {
+    console.warn("Challenge report email was not sent", notification);
   }
 
   return NextResponse.json({ ok: true }, { status: 201 });

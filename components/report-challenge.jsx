@@ -48,7 +48,7 @@ export function ReportChallenge({ challengeId }) {
   if (state === "sent") {
     return (
       <p className="flex items-center gap-2 text-sm text-success">
-        <CheckIcon className="size-4" /> Thanks — that goes straight to the person who wrote it.
+        <CheckIcon className="size-4" /> Thanks — it is saved for review.
       </p>
     );
   }
