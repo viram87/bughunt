@@ -40,6 +40,7 @@ export default async function ErrorPage({ params }) {
   if (!entry) notFound();
 
   const pattern = PATTERN_BY_SLUG[entry.pattern];
+  const url = absoluteUrl(`/errors/${slug}`);
 
   const jsonLd = [
     {
@@ -48,25 +49,31 @@ export default async function ErrorPage({ params }) {
       itemListElement: [
         { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
         { "@type": "ListItem", position: 2, name: "Errors", item: absoluteUrl("/errors") },
-        { "@type": "ListItem", position: 3, name: entry.error, item: absoluteUrl(`/errors/${slug}`) },
+        { "@type": "ListItem", position: 3, name: entry.error, item: url },
       ],
     },
     {
-      // The page is literally a question and its answer, so it is eligible for
-      // a rich result on the exact query people type.
+      // These are authored guides, not user-submitted Q&A threads. Google
+      // reserves QAPage for pages where users can submit answers.
       "@context": "https://schema.org",
-      "@type": "QAPage",
-      mainEntity: {
-        "@type": "Question",
-        name: `What causes "${entry.error}" in ${entry.language}?`,
-        text: `${entry.error} — what it means and how to fix it.`,
-        answerCount: 1,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: `${entry.means} ${entry.fix}`,
-          url: absoluteUrl(`/errors/${slug}`),
-        },
-      },
+      "@type": "LearningResource",
+      name: `${entry.error}: causes and fixes`,
+      description: entry.summary,
+      url,
+      learningResourceType: "Guide",
+      educationalUse: "Debugging",
+      teaches: pattern ? [entry.error, pattern.title] : entry.error,
+      programmingLanguage: entry.language,
+      inLanguage: "en",
+      isAccessibleForFree: true,
+      provider: { "@type": "Organization", name: SITE_NAME, url: SITE_URL },
+      about: [
+        { "@type": "Thing", name: entry.error },
+        { "@type": "Thing", name: `${entry.language} errors` },
+        ...(pattern
+          ? [{ "@type": "Thing", name: pattern.title, url: absoluteUrl(`/bugs/${pattern.slug}`) }]
+          : []),
+      ],
     },
   ];
 
