@@ -31,9 +31,20 @@ export function SiteFooter({ user }) {
               </span>
             </Link>
             <p className="mt-3 text-sm text-muted-foreground">
-              Free debugging practice for CS students. Fix real bugs, learn the patterns behind
-              them.
+              Free debugging practice for CS students. Fix real bugs, learn the
+              patterns behind them.
             </p>
+            <div className="mt-5">
+              <a
+                href="https://buymeacoffee.com/trybughunt"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 items-center justify-center rounded-md bg-[#FFDD00] px-4 py-2 text-sm font-medium text-black shadow transition-colors hover:bg-[#FFDD00]/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+              >
+                <span className="mr-2 text-lg leading-none">☕</span>
+                Buy me a coffee
+              </a>
+            </div>
           </div>
 
           <div>
@@ -55,7 +66,10 @@ export function SiteFooter({ user }) {
                 </li>
               ))}
               <li>
-                <Link href="/challenges?difficulty=easy" className="hover:text-foreground">
+                <Link
+                  href="/challenges?difficulty=easy"
+                  className="hover:text-foreground"
+                >
                   Beginner friendly
                 </Link>
               </li>
@@ -79,7 +93,10 @@ export function SiteFooter({ user }) {
                   entry points and are where it should go. */}
               {BUG_PATTERNS.slice(0, 4).map((pattern) => (
                 <li key={pattern.slug}>
-                  <Link href={`/bugs/${pattern.slug}`} className="hover:text-foreground">
+                  <Link
+                    href={`/bugs/${pattern.slug}`}
+                    className="hover:text-foreground"
+                  >
                     {pattern.title}
                   </Link>
                 </li>

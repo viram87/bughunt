@@ -91,9 +91,14 @@ export function SiteHeader({ user, profile }) {
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={profile?.avatar ?? undefined} alt={profile?.name ?? user.email} />
+                  <AvatarImage
+                    src={profile?.avatar ?? undefined}
+                    alt={profile?.name ?? user.email}
+                  />
                   <AvatarFallback>
-                    {(profile?.name ?? user.email ?? "?").charAt(0).toUpperCase()}
+                    {(profile?.name ?? user.email ?? "?")
+                      .charAt(0)
+                      .toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -101,7 +106,9 @@ export function SiteHeader({ user, profile }) {
                 <DropdownMenuItem disabled className="opacity-100">
                   {profile?.name ?? user.email}
                   {profile?.role === "admin" && (
-                    <span className="ml-2 text-xs text-muted-foreground">admin</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      admin
+                    </span>
                   )}
                 </DropdownMenuItem>
                 {/* Duplicated from the row above, which is hidden below sm so
@@ -119,7 +126,9 @@ export function SiteHeader({ user, profile }) {
                     render={<Link href="/admin">Admin</Link>}
                   />
                 )}
-                <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Sign out
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -158,7 +167,11 @@ export function SiteHeader({ user, profile }) {
               nativeButton={false}
               render={<Link href="/login">Log in</Link>}
             />
-            <Button size="sm" nativeButton={false} render={<Link href="/signup">Sign up</Link>} />
+            <Button
+              size="sm"
+              nativeButton={false}
+              render={<Link href="/signup">Sign up</Link>}
+            />
           </div>
         )}
       </div>
