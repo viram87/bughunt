@@ -43,7 +43,7 @@ export async function POST(request) {
   }
 
   const body = await request.json();
-  const { bug_challenge_id, submitted_code, status, hints_used, time_taken_seconds } = body;
+  const { bug_challenge_id, submitted_code, status, hints_used, time_taken_seconds, edit_count, run_count } = body;
 
   if (!bug_challenge_id || !STATUS_VALUES.includes(status)) {
     return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400 });
@@ -84,6 +84,8 @@ export async function POST(request) {
       hints_used: hints_used ?? 0,
       time_taken_seconds: time_taken_seconds ?? null,
       attempt_number,
+      edit_count: edit_count ?? 0,
+      run_count: run_count ?? 0,
     })
     .select()
     .single();

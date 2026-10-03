@@ -96,6 +96,10 @@ const FAQS = [
     a: "Yes, with no account required to try a challenge. Your code runs in your own browser rather than on our servers, so there is nothing for us to pay for per user and no reason to put a limit on it.",
   },
   {
+    q: "Can't I just paste the code into ChatGPT?",
+    a: "You absolutely can, and it will probably give you the fix. But the fix is not the point \u2014 the pattern is. An AI that fixes your off-by-one error does not teach you to spot the next one in a 2,000-line codebase at 11pm. Debugging is a reflex, and reflexes are built by repetition, not by reading someone else\u2019s answer. If you do want the answer, we show it to you in three progressive hints anyway.",
+  },
+  {
     q: "Which languages are supported?",
     a: "Python and JavaScript. Both run natively in the browser — Python via WebAssembly. Compiled languages like Java and C++ would need server-side execution, which is what makes other platforms expensive to run.",
   },
@@ -213,6 +217,9 @@ export default async function LandingPage() {
             gives you working code with one real bug in it — you find it, fix it, and learn the
             pattern behind it.
           </p>
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground/80">
+            AI writes code. You still have to know when it{"'"}{"s"} wrong.
+          </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button
               size="lg"
@@ -271,6 +278,11 @@ export default async function LandingPage() {
             <p className="text-foreground">
               BugHunt exists to give you the reps: read unfamiliar code, spot what is wrong, and
               build the pattern library that makes it fast.
+            </p>
+            <p>
+              This matters more, not less, in a world full of AI coding assistants. Copilot can
+              generate a function, but when the output is subtly wrong, the person who finds the
+              fault is still you. That skill is what this site trains.
             </p>
           </div>
         </div>

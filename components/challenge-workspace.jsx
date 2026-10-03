@@ -83,7 +83,10 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   );
 
   const code = fileContents[activeFile] ?? "";
-  const setCode = (value) => setFileContents((prev) => ({ ...prev, [activeFile]: value }));
+  const setCode = (value) => {
+    setFileContents((prev) => ({ ...prev, [activeFile]: value }));
+    setEditCount((c) => c + 1);
+  };
 
   // What actually gets executed: the whole file set for multi-file, or the
   // single blob otherwise.
@@ -105,6 +108,8 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
   // from your last passing submission if you're reopening a solved
   // challenge, not the live editor content.
   const [submittedCode, setSubmittedCode] = useState(lastPassedAttempt?.submitted_code ?? challenge.broken_code);
+  const [editCount, setEditCount] = useState(0);
+  const [runCount, setRunCount] = useState(0);
 
   useEffect(() => {
     const timer = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
@@ -139,6 +144,8 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
     const codeAtSubmission = isMultiFile
       ? JSON.stringify(currentFiles(), null, 2)
       : code;
+    
+    setRunCount((c) => c + 1);
 
     setSubmitting(true);
     setResults(null);
@@ -182,6 +189,8 @@ export function ChallengeWorkspace({ challenge, isLoggedIn, priorAttempts, isBoo
             status: allPassed ? "passed" : "failed",
             hints_used: hintsUnlocked,
             time_taken_seconds: elapsedSeconds,
+            edit_count: editCount,
+            run_count: runCount,
           }),
         });
       } catch {
